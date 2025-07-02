@@ -15,6 +15,7 @@
         .btn { padding: 8px 16px; margin: 4px; border: none; border-radius: 4px; cursor: pointer; }
         .btn-primary { background-color: #007bff; color: white; }
         .btn-success { background-color: #28a745; color: white; }
+        .btn-danger { background-color: #dc3545; color: white; }
         .btn:hover { opacity: 0.8; }
         .results { margin-top: 20px; }
         .result-section { margin: 15px 0; padding: 15px; background-color: #f8f9fa; border-radius: 4px; }
@@ -32,6 +33,7 @@
         
         <div style="margin: 20px 0;">
             <button class="btn btn-success" onclick="addRow()">행 추가</button>
+            <button class="btn btn-danger" onclick="resetData()">초기화</button>
             <button class="btn btn-primary" onclick="calculate()">계산하기</button>
             <button class="btn btn-success" id="downloadBtn" onclick="downloadCSV()" style="display: none; margin-left: 10px;">결과 저장 (CSV)</button>
         </div>
@@ -185,6 +187,28 @@
         
         function downloadCSV() {
             window.location.href = '/download_csv';
+        }
+        
+        function resetData() {
+            if (confirm('모든 데이터가 초기화됩니다. 계속하시겠습니까?')) {
+                fetch('/reset_data', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        tableData = data.table_data;
+                        document.getElementById('sample_name').value = '';
+                        document.getElementById('results').innerHTML = '';
+                        document.getElementById('downloadBtn').style.display = 'none';
+                        renderTable();
+                    }
+                })
+                .catch(error => {
+                    alert('초기화 중 오류가 발생했습니다: ' + error);
+                });
+            }
         }
         
         document.getElementById('sample_name').addEventListener('input', updateData);

@@ -81,6 +81,28 @@ def add_row():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)})
 
+@app.route('/reset_data', methods=['POST'])
+def reset_data():
+    try:
+        # 기본 10행으로 초기화
+        default_rows = 10
+        session['table_data'] = {
+            'No.': list(range(1, default_rows + 1)),
+            'size(nm)': [None] * default_rows,
+            'PI': [None] * default_rows
+        }
+        session['sample_name'] = ''
+        
+        # 이전 계산 결과도 초기화
+        if 'last_results' in session:
+            del session['last_results']
+        
+        clean_table_data = clean_data_for_json(session['table_data'])
+        
+        return jsonify({'status': 'success', 'table_data': clean_table_data})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
 @app.route('/calculate', methods=['POST'])
 def calculate():
     try:
