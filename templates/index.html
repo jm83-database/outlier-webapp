@@ -33,6 +33,7 @@
         <div style="margin: 20px 0;">
             <button class="btn btn-success" onclick="addRow()">행 추가</button>
             <button class="btn btn-primary" onclick="calculate()">계산하기</button>
+            <button class="btn btn-success" id="downloadBtn" onclick="downloadCSV()" style="display: none; margin-left: 10px;">결과 저장 (CSV)</button>
         </div>
         
         <table id="dataTable">
@@ -125,25 +126,65 @@
                 }
                 
                 let html = `<h2>계산 결과 (${data.sample_name})</h2>`;
-                html += `<div class="result-section"><h3>원본 데이터 (${data.original_count}개)</h3></div>`;
                 
+                // 원본 데이터 테이블
+                html += `
+                    <div class="result-section">
+                        <h3>원본 데이터 (총 ${data.original_count}개)</h3>
+                        <table>
+                            <thead>
+                                <tr><th>No.</th><th>size(nm)</th><th>PI</th></tr>
+                            </thead>
+                            <tbody>
+                `;
+                
+                data.original_data.forEach(row => {
+                    html += `<tr><td>${row['No.']}</td><td>${row['size(nm)'].toFixed(3)}</td><td>${row['PI'].toFixed(3)}</td></tr>`;
+                });
+                
+                html += `</tbody></table></div>`;
+                
+                // 각 방법별 결과 테이블
                 ['zscore', 'iqr', 'mad'].forEach(method => {
                     const result = data[method];
                     html += `
                         <div class="result-section">
-                            <h3>${result.name} 결과 (${result.count}개)</h3>
-                            <p>size 평균: ${result.size_mean.toFixed(3)}, 표준편차: ${result.size_std.toFixed(3)}</p>
-                            <p>PI 평균: ${result.pi_mean.toFixed(3)}, 표준편차: ${result.pi_std.toFixed(3)}</p>
+                            <h3>${result.name} 이상치 제거 결과 (${result.count}개)</h3>
+                            <table>
+                                <thead>
+                                    <tr><th>No.</th><th>size(nm)</th><th>PI</th></tr>
+                                </thead>
+                                <tbody>
+                    `;
+                    
+                    result.data.forEach(row => {
+                        html += `<tr><td>${row['No.']}</td><td>${row['size(nm)'].toFixed(3)}</td><td>${row['PI'].toFixed(3)}</td></tr>`;
+                    });
+                    
+                    html += `
+                                </tbody>
+                            </table>
+                            <div style="background-color: #e9ecef; padding: 10px; border-radius: 5px; margin: 10px 0;">
+                                <p><strong>size(nm) 평균/표준편차:</strong> ${result.size_mean.toFixed(3)} / ${result.size_std.toFixed(3)}</p>
+                                <p><strong>PI 평균/표준편차:</strong> ${result.pi_mean.toFixed(3)} / ${result.pi_std.toFixed(3)}</p>
+                            </div>
                         </div>
                     `;
                 });
                 
                 document.getElementById('results').innerHTML = html;
+                
+                // 계산 완료 후 다운로드 버튼 표시
+                document.getElementById('downloadBtn').style.display = 'inline-block';
             })
             .catch(error => {
                 document.getElementById('results').innerHTML = 
                     `<div class="error">오류: ${error}</div>`;
             });
+        }
+        
+        function downloadCSV() {
+            window.location.href = '/download_csv';
         }
         
         document.getElementById('sample_name').addEventListener('input', updateData);

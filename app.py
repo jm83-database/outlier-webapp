@@ -169,6 +169,66 @@ def calculate():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)})
 
+@app.route('/download_csv')
+def download_csv():
+    try:
+        results = session.get('last_results')
+        if not results:
+            return jsonify({'status': 'error', 'message': '저장할 결과가 없습니다. 먼저 계산을 실행하세요.'})
+        
+        csv_content = []
+        sample_name = results.get('sample_name', '샘플')
+        
+        csv_content.append(f"샘플명,{sample_name}")
+        csv_content.append(f"계산일시,{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        csv_content.append("")
+        
+        csv_content.append("=== 원본 데이터 ===")
+        original_df = pd.DataFrame(results['original_data'])
+        csv_content.append(f"총 {results['original_count']}개 데이터")
+        csv_content.append("")
+        
+        original_csv = original_df.to_csv(index=False, encoding='utf-8')
+        csv_content.append(original_csv.strip())
+        csv_content.append("")
+        csv_content.append("")
+        
+        methods = ['zscore', 'iqr', 'mad']
+        method_names = {'zscore': 'Z-Score 이상치 제거', 'iqr': 'IQR 이상치 제거', 'mad': 'MAD 이상치 제거'}
+        
+        for method in methods:
+            method_result = results[method]
+            csv_content.append(f"=== {method_names[method]} 결과 ===")
+            csv_content.append(f"처리된 데이터 개수,{method_result['count']}개")
+            csv_content.append(f"size(nm) 평균,{method_result['size_mean']:.3f}")
+            csv_content.append(f"size(nm) 표준편차,{method_result['size_std']:.3f}")
+            csv_content.append(f"PI 평균,{method_result['pi_mean']:.3f}")
+            csv_content.append(f"PI 표준편차,{method_result['pi_std']:.3f}")
+            csv_content.append("")
+            
+            cleaned_df = pd.DataFrame(method_result['data'])
+            cleaned_csv = cleaned_df.to_csv(index=False, encoding='utf-8')
+            csv_content.append(cleaned_csv.strip())
+            csv_content.append("")
+            csv_content.append("")
+        
+        final_csv = '\n'.join(csv_content)
+        final_csv_bytes = '\ufeff' + final_csv
+        
+        response = make_response(final_csv_bytes.encode('utf-8'))
+        response.headers['Content-Type'] = 'text/csv; charset=utf-8'
+        
+        import urllib.parse
+        filename = f"outlier_results_{sample_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        encoded_filename = urllib.parse.quote(filename.encode('utf-8'))
+        
+        response.headers['Content-Disposition'] = f"attachment; filename*=UTF-8''{encoded_filename}"
+        
+        return response
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
