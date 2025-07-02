@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>아웃라이어 자동제거 및 통계 계산기</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .input-section {
+            margin-bottom: 30px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .table-container {
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+            font-weight: bold;
+        }
+        input[type="number"] {
+            width: 100%;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+        .btn {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+        .btn-success {
+            background-color: #28a745;
+            color: white;
+        }
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+        .btn:hover {
+            opacity: 0.8;
+        }
+        .results {
+            margin-top: 30px;
+        }
+        .result-section {
+            margin: 20px 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+        .stats {
+            background-color: #e9ecef;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        .error {
+            color: #dc3545;
+            background-color: #f8d7da;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>아웃라이어 자동제거 및 통계 계산기</h1>
+
+        <div class="input-section">
+            <label for="sample_name">샘플 이름을 입력하세요:</label>
+            <input type="text" id="sample_name" value="{{ sample_name }}" placeholder="샘플 이름">
+        </div>
+
+        <div class="table-container">
+            <h3>size(nm), PI 값을 아래 표에 직접 입력하세요</h3>
+            <p>(행 추가/삭제 지원, 1열 번호는 자동)</p>
+
+            <div style="margin-bottom: 10px;">
+                <button class="btn btn-success" onclick="addRow()">행 추가</button>
+            </div>
+
+            <table id="dataTable">
+                <thead>
+                    <tr>
+                        <th>No.</th>
+                        <th>size(nm)</th>
+                        <th>PI</th>
+                        <th>삭제</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <!-- 테이블 데이터는 JavaScript로 생성 -->
+                </tbody>
+            </table>
+        </div>
+
+        <div style="text-align: center;">
+            <button class="btn btn-primary" onclick="calculate()">계산하기</button>
+            <button class="btn btn-success" id="downloadBtn" onclick="downloadCSV()" style="display: none; margin-left: 10px;">결과 저장 (CSV)</button>
+        </div>
+
+        <div class="loading" id="loading">
+            <p>계산 중...</p>
+        </div>
+
+        <div id="results" class="results"></div>
+    </div>
+
+    <script>
+        // 초기 테이블 데이터
+        let tableData = {{ table_data | tojson }};
+
+        // 페이지 로드 시 테이블 렌더링
+        document.addEventListener('DOMContentLoaded', function() {
+            renderTable();
+        });
+
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            for (let i = 0; i < tableData['No.'].length; i++) {
+                const row = tbody.insertRow();
+
+                // 번호
+                const noCell = row.insertCell(0);
+                noCell.textContent = tableData['No.'][i];
+
+                // size(nm)
+                const sizeCell = row.insertCell(1);
+                const sizeInput = document.createElement('input');
+                sizeInput.type = 'number';
+                sizeInput.step = 'any';
+                // 빈 문자열이나 null 값을 안전하게 처리
+                const sizeValue = tableData['size(nm)'][i];
+                sizeInput.value = (sizeValue !== null && sizeValue !== undefined && sizeValue !== '') ? sizeValue : '';
+                sizeInput.onchange = function() {
+                    tableData['size(nm)'][i] = this.value === '' ? null : parseFloat(this.value);
+                    updateData();
+                };
+                sizeCell.appendChild(sizeInput);
+
+                // PI
+                const piCell = row.insertCell(2);
+                const piInput = document.createElement('input');
+                piInput.type = 'number';
+                piInput.step = 'any';
+                // 빈 문자열이나 null 값을 안전하게 처리
+                const piValue = tableData['PI'][i];
+                piInput.value = (piValue !== null && piValue !== undefined && piValue !== '') ? piValue : '';
+                piInput.onchange = function() {
+                    tableData['PI'][i] = this.value === '' ? null : parseFloat(this.value);
+                    updateData();
+                };
+                piCell.appendChild(piInput);
+
+                // 삭제 버튼
+                const deleteCell = row.insertCell(3);
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = '삭제';
+                deleteBtn.className = 'btn btn-danger';
+                deleteBtn.onclick = function() {
+                    removeRow(i);
+                };
+                deleteCell.appendChild(deleteBtn);
+            }
+        }
+
+        function updateData() {
+            const sampleName = document.getElementById('sample_name').value;
+
+            fetch('/update_data', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    sample_name: sampleName,
+                    table_data: tableData
+                })
+            });
+        }
+
+        function addRow() {
+            fetch('/add_row', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    tableData = data.table_data;
+                    renderTable();
+                }
+            });
+        }
+
+        function removeRow(index) {
+            fetch('/remove_row', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    row_index: index
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    tableData = data.table_data;
+                    renderTable();
+                }
+            });
+        }
+
+        function calculate() {
+            // 현재 데이터 업데이트
+            updateData();
+
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('results').innerHTML = '';
+
+            setTimeout(() => {
+                fetch('/calculate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('loading').style.display = 'none';
+
+                    if (data.status === 'error') {
+                        document.getElementById('results').innerHTML =
+                            `<div class="error">오류: ${data.message}</div>`;
+                        return;
+                    }
+
+                    let html = `
+                        <h2>계산 결과 (${data.sample_name})</h2>
+
+                        <div class="result-section">
+                            <h3>원본 데이터 (총 ${data.original_count}개)</h3>
+                            <table>
+                                <thead>
+                                    <tr><th>No.</th><th>size(nm)</th><th>PI</th></tr>
+                                </thead>
+                                <tbody>
+                    `;
+
+                    data.original_data.forEach(row => {
+                        html += `<tr><td>${row['No.']}</td><td>${row['size(nm)'].toFixed(3)}</td><td>${row['PI'].toFixed(3)}</td></tr>`;
+                    });
+
+                    html += `</tbody></table></div>`;
+
+                    // 각 방법별 결과
+                    ['zscore', 'iqr', 'mad'].forEach(method => {
+                        const result = data[method];
+                        html += `
+                            <div class="result-section">
+                                <h3>${result.name} 이상치 제거 결과 (${result.count}개)</h3>
+                                <table>
+                                    <thead>
+                                        <tr><th>No.</th><th>size(nm)</th><th>PI</th></tr>
+                                    </thead>
+                                    <tbody>
+                        `;
+
+                        result.data.forEach(row => {
+                            html += `<tr><td>${row['No.']}</td><td>${row['size(nm)'].toFixed(3)}</td><td>${row['PI'].toFixed(3)}</td></tr>`;
+                        });
+
+                        html += `
+                                    </tbody>
+                                </table>
+                                <div class="stats">
+                                    <p><strong>평균/표준편차(size):</strong> ${result.size_mean.toFixed(3)} / ${result.size_std.toFixed(3)}</p>
+                                    <p><strong>평균/표준편차(PI):</strong> ${result.pi_mean.toFixed(3)} / ${result.pi_std.toFixed(3)}</p>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    document.getElementById('results').innerHTML = html;
+
+                    // 계산 완료 후 다운로드 버튼 표시
+                    document.getElementById('downloadBtn').style.display = 'inline-block';
+                })
+                .catch(error => {
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('results').innerHTML =
+                        `<div class="error">오류가 발생했습니다: ${error}</div>`;
+                });
+            }, 100);
+        }
+
+        function downloadCSV() {
+            // CSV 다운로드
+            window.location.href = '/download_csv';
+        }
+
+        // 샘플 이름 변경 시 업데이트
+        document.getElementById('sample_name').addEventListener('input', updateData);
+    </script>
+</body>
+</html>
