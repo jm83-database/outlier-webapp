@@ -5,6 +5,7 @@ import json
 from datetime import datetime
 
 app = Flask(__name__)
+app.secret_key = 'your-secret-key-change-in-production'
 
 
 # JSON 직렬화를 위한 커스텀 필터 추가
@@ -299,4 +300,6 @@ def download_csv():
 
 
 if __name__ == '__main__':
-    app.run(debug=False)
+    import os
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
