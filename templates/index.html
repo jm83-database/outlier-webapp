@@ -580,14 +580,36 @@
                     </div>
 
                     <div class="border-l-4 border-purple-500 pl-4 bg-purple-50 p-4 rounded-lg shadow-sm">
-                        <h4 class="text-lg font-semibold mb-3 text-purple-600">📋 결과 활용</h4>
+                        <h4 class="text-lg font-semibold mb-3 text-purple-600">📈 패스별 데이터 관리</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                            <div>
+                                <h5 class="font-medium mb-2 text-purple-700">📝 평균값 입력</h5>
+                                <ul class="list-disc list-inside space-y-1 text-muted-foreground">
+                                    <li><strong>수동 입력:</strong> 패스 번호, Size(nm) 평균, PI 평균 직접 입력</li>
+                                    <li><strong>계산 결과 활용:</strong> 이상치 검출 결과에서 자동 추가</li>
+                                    <li><strong>점도 데이터:</strong> 선택적으로 점도값 (cP) 함께 저장</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <h5 class="font-medium mb-2 text-purple-700">📊 트렌드 분석</h5>
+                                <ul class="list-disc list-inside space-y-1 text-muted-foreground">
+                                    <li><strong>패스별 트렌드:</strong> Size/PI 값의 패스별 변화 추이</li>
+                                    <li><strong>상관관계 분석:</strong> Size-PI 간 상관계수 계산</li>
+                                    <li><strong>통계 요약:</strong> 평균, 표준편차, 변동계수 제공</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="border-l-4 border-indigo-500 pl-4 bg-indigo-50 p-4 rounded-lg shadow-sm">
+                        <h4 class="text-lg font-semibold mb-3 text-indigo-600">📋 결과 활용</h4>
                         <div class="space-y-3 text-sm">
-                            <div class="bg-purple-100 border border-purple-200 p-3 rounded-xl">
-                                <h5 class="font-medium mb-2 text-purple-800">📊 시각화</h5>
+                            <div class="bg-indigo-100 border border-indigo-200 p-3 rounded-xl">
+                                <h5 class="font-medium mb-2 text-indigo-800">📊 시각화</h5>
                                 <p class="text-gray-600">인터랙티브 산점도로 데이터 분포 확인, 마우스 오버로 세부 정보 표시</p>
                             </div>
-                            <div class="bg-purple-100 border border-purple-200 p-3 rounded-xl">
-                                <h5 class="font-medium mb-2 text-purple-800">📁 결과 다운로드</h5>
+                            <div class="bg-indigo-100 border border-indigo-200 p-3 rounded-xl">
+                                <h5 class="font-medium mb-2 text-indigo-800">📁 결과 다운로드</h5>
                                 <p class="text-gray-600">"결과 다운로드" 버튼으로 CSV 파일 저장, 원본 데이터와 처리 결과 모두 포함</p>
                             </div>
                         </div>
