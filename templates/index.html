@@ -3,49 +3,322 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>아웃라이어 계산기</title>
+    <title>Outlier Data Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        border: "hsl(var(--border))",
+                        input: "hsl(var(--input))",
+                        ring: "hsl(var(--ring))",
+                        background: "hsl(var(--background))",
+                        foreground: "hsl(var(--foreground))",
+                        primary: {
+                            DEFAULT: "hsl(var(--primary))",
+                            foreground: "hsl(var(--primary-foreground))",
+                        },
+                        secondary: {
+                            DEFAULT: "hsl(var(--secondary))",
+                            foreground: "hsl(var(--secondary-foreground))",
+                        },
+                        destructive: {
+                            DEFAULT: "hsl(var(--destructive))",
+                            foreground: "hsl(var(--destructive-foreground))",
+                        },
+                        muted: {
+                            DEFAULT: "hsl(var(--muted))",
+                            foreground: "hsl(var(--muted-foreground))",
+                        },
+                        accent: {
+                            DEFAULT: "hsl(var(--accent))",
+                            foreground: "hsl(var(--accent-foreground))",
+                        },
+                        card: {
+                            DEFAULT: "hsl(var(--card))",
+                            foreground: "hsl(var(--card-foreground))",
+                        },
+                    },
+                }
+            }
+        }
+    </script>
     <style>
-        body { font-family: Arial, sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; }
-        .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        h1 { text-align: center; color: #333; }
-        input[type="text"], input[type="number"] { padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
-        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
-        th { background-color: #4CAF50; color: white; }
-        .btn { padding: 8px 16px; margin: 4px; border: none; border-radius: 4px; cursor: pointer; }
-        .btn-primary { background-color: #007bff; color: white; }
-        .btn-success { background-color: #28a745; color: white; }
-        .btn-danger { background-color: #dc3545; color: white; }
-        .btn:hover { opacity: 0.8; }
-        .results { margin-top: 20px; }
-        .result-section { margin: 15px 0; padding: 15px; background-color: #f8f9fa; border-radius: 4px; }
-        .error { color: #dc3545; background-color: #f8d7da; padding: 10px; border-radius: 4px; }
+        :root {
+            --background: 0 0% 100%;
+            --foreground: 222.2 84% 4.9%;
+            --card: 0 0% 100%;
+            --card-foreground: 222.2 84% 4.9%;
+            --popover: 0 0% 100%;
+            --popover-foreground: 222.2 84% 4.9%;
+            --primary: 221.2 83.2% 53.3%;
+            --primary-foreground: 210 40% 98%;
+            --secondary: 210 40% 96%;
+            --secondary-foreground: 222.2 84% 4.9%;
+            --muted: 210 40% 96%;
+            --muted-foreground: 215.4 16.3% 46.9%;
+            --accent: 210 40% 96%;
+            --accent-foreground: 222.2 84% 4.9%;
+            --destructive: 0 84.2% 60.2%;
+            --destructive-foreground: 210 40% 98%;
+            --border: 214.3 31.8% 91.4%;
+            --input: 214.3 31.8% 91.4%;
+            --ring: 221.2 83.2% 53.3%;
+        }
+        
+        .dark {
+            --background: 222.2 84% 4.9%;
+            --foreground: 210 40% 98%;
+            --card: 222.2 84% 4.9%;
+            --card-foreground: 210 40% 98%;
+            --popover: 222.2 84% 4.9%;
+            --popover-foreground: 210 40% 98%;
+            --primary: 217.2 91.2% 59.8%;
+            --primary-foreground: 222.2 84% 4.9%;
+            --secondary: 217.2 32.6% 17.5%;
+            --secondary-foreground: 210 40% 98%;
+            --muted: 217.2 32.6% 17.5%;
+            --muted-foreground: 215 20.2% 65.1%;
+            --accent: 217.2 32.6% 17.5%;
+            --accent-foreground: 210 40% 98%;
+            --destructive: 0 62.8% 30.6%;
+            --destructive-foreground: 210 40% 98%;
+            --border: 217.2 32.6% 17.5%;
+            --input: 217.2 32.6% 17.5%;
+            --ring: 224.3 76.3% 94.1%;
+        }
+        
+        .btn {
+            @apply inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+        }
+        
+        .btn-primary {
+            @apply bg-primary text-primary-foreground hover:bg-primary/90;
+        }
+        
+        .btn-secondary {
+            @apply bg-secondary text-secondary-foreground hover:bg-secondary/80;
+        }
+        
+        .btn-outline {
+            @apply border border-input bg-background hover:bg-accent hover:text-accent-foreground;
+        }
+        
+        .btn-destructive {
+            @apply bg-destructive text-destructive-foreground hover:bg-destructive/90;
+        }
+        
+        .btn-sm {
+            @apply h-9 px-3 text-xs;
+        }
+        
+        .btn-default {
+            @apply h-10 px-4 py-2;
+        }
+        
+        .card {
+            @apply rounded-lg border bg-card text-card-foreground shadow-sm;
+        }
+        
+        .input {
+            @apply flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+        }
+        
+        .slider {
+            @apply relative flex w-full touch-none select-none items-center;
+        }
+        
+        .slider-track {
+            @apply relative h-2 w-full grow overflow-hidden rounded-full bg-secondary;
+        }
+        
+        .slider-range {
+            @apply absolute h-full bg-primary;
+        }
+        
+        .slider-thumb {
+            @apply block h-5 w-5 rounded-full border-2 border-primary bg-background ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+        }
     </style>
 </head>
-<body>
-    <div class="container">
-        <h1>아웃라이어 자동제거 및 통계 계산기</h1>
-        
-        <div>
-            <label>샘플 이름:</label>
-            <input type="text" id="sample_name" value="{{ sample_name }}" placeholder="샘플 이름">
+<body class="bg-background text-foreground">
+    <div class="container mx-auto py-6 px-4 max-w-7xl">
+        <!-- Header -->
+        <div class="card p-6 mb-6">
+            <h1 class="text-3xl font-bold text-center mb-2">Outlier Data Management System</h1>
+            <p class="text-muted-foreground text-center">실험 및 생산 데이터의 이상치 자동 검출·제거, 통계, 시각화 및 비교 분석</p>
         </div>
-        
-        <div style="margin: 20px 0;">
-            <button class="btn btn-success" onclick="addRow()">행 추가</button>
-            <button class="btn btn-danger" onclick="resetData()">초기화</button>
-            <button class="btn btn-primary" onclick="calculate()">계산하기</button>
-            <button class="btn btn-success" id="downloadBtn" onclick="downloadCSV()" style="display: none; margin-left: 10px;">결과 저장 (CSV)</button>
+
+        <!-- Data Input Section -->
+        <div class="card p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">데이터 입력 및 관리</h2>
+            
+            <!-- Meta Information -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div>
+                    <label class="block text-sm font-medium mb-2">샘플명</label>
+                    <input type="text" id="sample_name" value="{{ sample_name }}" 
+                           placeholder="샘플 이름을 입력하세요" class="input">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">생산일자</label>
+                    <input type="date" id="production_date" value="{{ production_date }}" class="input">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">패스 수</label>
+                    <input type="number" id="pass_count" value="{{ pass_count }}" min="1" class="input">
+                </div>
+            </div>
+
+            <!-- File Upload -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium mb-2">파일 업로드 (Excel/CSV)</label>
+                <div class="flex items-center gap-2">
+                    <input type="file" id="file_upload" accept=".xlsx,.xls,.csv" class="input">
+                    <button onclick="uploadFile()" class="btn btn-secondary btn-default">업로드</button>
+                </div>
+            </div>
+
+            <!-- Table Controls -->
+            <div class="flex flex-wrap gap-2 mb-4">
+                <button onclick="addRow()" class="btn btn-secondary btn-sm">행 추가</button>
+                <button onclick="showAddColumnModal()" class="btn btn-secondary btn-sm">컬럼 추가</button>
+                <button onclick="resetData()" class="btn btn-destructive btn-sm">초기화</button>
+                <button onclick="showSaveModal()" class="btn btn-outline btn-sm">데이터셋 저장</button>
+                <button onclick="showLoadModal()" class="btn btn-outline btn-sm">데이터셋 불러오기</button>
+                <button onclick="showCompareModal()" class="btn btn-outline btn-sm">데이터셋 비교</button>
+            </div>
+
+            <!-- Data Table -->
+            <div class="overflow-x-auto border rounded-lg">
+                <table id="dataTable" class="w-full">
+                    <thead class="bg-muted">
+                        <tr id="tableHeader"></tr>
+                    </thead>
+                    <tbody id="tableBody" class="divide-y"></tbody>
+                </table>
+            </div>
         </div>
-        
-        <table id="dataTable">
-            <thead>
-                <tr><th>No.</th><th>size(nm)</th><th>PI</th></tr>
-            </thead>
-            <tbody id="tableBody"></tbody>
-        </table>
-        
-        <div id="results" class="results"></div>
+
+        <!-- Threshold Controls -->
+        <div class="card p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">이상치 검출 임계값 조정</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Z-Score Threshold -->
+                <div>
+                    <label class="block text-sm font-medium mb-2">Z-Score 임계값</label>
+                    <div class="space-y-2">
+                        <input type="range" id="zscore_slider" min="1" max="5" step="0.1" value="3.0" 
+                               class="slider w-full" oninput="updateThresholdDisplay('zscore', this.value)">
+                        <div class="flex justify-between text-xs text-muted-foreground">
+                            <span>1.0</span>
+                            <span id="zscore_value" class="font-medium">3.0</span>
+                            <span>5.0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- IQR Threshold -->
+                <div>
+                    <label class="block text-sm font-medium mb-2">IQR 임계값</label>
+                    <div class="space-y-2">
+                        <input type="range" id="iqr_slider" min="0.5" max="3.0" step="0.1" value="1.5" 
+                               class="slider w-full" oninput="updateThresholdDisplay('iqr', this.value)">
+                        <div class="flex justify-between text-xs text-muted-foreground">
+                            <span>0.5</span>
+                            <span id="iqr_value" class="font-medium">1.5</span>
+                            <span>3.0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MAD Threshold -->
+                <div>
+                    <label class="block text-sm font-medium mb-2">MAD 임계값</label>
+                    <div class="space-y-2">
+                        <input type="range" id="mad_slider" min="1" max="5" step="0.1" value="3.5" 
+                               class="slider w-full" oninput="updateThresholdDisplay('mad', this.value)">
+                        <div class="flex justify-between text-xs text-muted-foreground">
+                            <span>1.0</span>
+                            <span id="mad_value" class="font-medium">3.5</span>
+                            <span>5.0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-6 flex flex-wrap gap-2">
+                <button onclick="calculateWithThresholds()" class="btn btn-primary btn-default">이상치 검출 및 계산</button>
+                <button id="downloadBtn" onclick="downloadCSV()" class="btn btn-secondary btn-default hidden">결과 다운로드 (CSV)</button>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="results" class="space-y-6"></div>
+
+        <!-- Modals -->
+        <!-- Add Column Modal -->
+        <div id="addColumnModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+            <div class="card p-6 w-96 mx-4">
+                <h3 class="text-lg font-semibold mb-4">새 컬럼 추가</h3>
+                <input type="text" id="new_column_name" placeholder="컬럼 이름" class="input mb-4">
+                <div class="flex gap-2">
+                    <button onclick="addColumn()" class="btn btn-primary btn-default flex-1">추가</button>
+                    <button onclick="closeModal('addColumnModal')" class="btn btn-outline btn-default">취소</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Save Dataset Modal -->
+        <div id="saveModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+            <div class="card p-6 w-96 mx-4">
+                <h3 class="text-lg font-semibold mb-4">데이터셋 저장</h3>
+                <input type="text" id="dataset_name" placeholder="데이터셋 이름" class="input mb-4">
+                <div class="flex gap-2">
+                    <button onclick="saveDataset()" class="btn btn-primary btn-default flex-1">저장</button>
+                    <button onclick="closeModal('saveModal')" class="btn btn-outline btn-default">취소</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Load Dataset Modal -->
+        <div id="loadModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+            <div class="card p-6 w-96 mx-4">
+                <h3 class="text-lg font-semibold mb-4">데이터셋 불러오기</h3>
+                <select id="load_dataset_select" class="input mb-4">
+                    <option value="">데이터셋 선택</option>
+                    {% for dataset in saved_datasets %}
+                    <option value="{{ dataset }}">{{ dataset }}</option>
+                    {% endfor %}
+                </select>
+                <div class="flex gap-2">
+                    <button onclick="loadDataset()" class="btn btn-primary btn-default flex-1">불러오기</button>
+                    <button onclick="closeModal('loadModal')" class="btn btn-outline btn-default">취소</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Compare Datasets Modal -->
+        <div id="compareModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+            <div class="card p-6 w-96 mx-4">
+                <h3 class="text-lg font-semibold mb-4">데이터셋 비교</h3>
+                <div class="space-y-2 mb-4">
+                    {% for dataset in saved_datasets %}
+                    <label class="flex items-center space-x-2">
+                        <input type="checkbox" name="compare_datasets" value="{{ dataset }}" class="rounded">
+                        <span>{{ dataset }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="compareDatasets()" class="btn btn-primary btn-default flex-1">비교</button>
+                    <button onclick="closeModal('compareModal')" class="btn btn-outline btn-default">취소</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -56,46 +329,62 @@
         });
         
         function renderTable() {
+            const header = document.getElementById('tableHeader');
             const tbody = document.getElementById('tableBody');
+            
+            // Clear existing content
+            header.innerHTML = '';
             tbody.innerHTML = '';
             
-            for (let i = 0; i < tableData['No.'].length; i++) {
+            // Create header
+            const columns = Object.keys(tableData);
+            columns.forEach(col => {
+                const th = document.createElement('th');
+                th.className = 'px-4 py-2 text-left font-medium';
+                th.textContent = col;
+                header.appendChild(th);
+            });
+            
+            // Create rows
+            const rowCount = tableData['No.'] ? tableData['No.'].length : 0;
+            for (let i = 0; i < rowCount; i++) {
                 const row = tbody.insertRow();
+                row.className = 'hover:bg-muted/50';
                 
-                row.insertCell(0).textContent = tableData['No.'][i];
-                
-                const sizeCell = row.insertCell(1);
-                const sizeInput = document.createElement('input');
-                sizeInput.type = 'number';
-                sizeInput.step = 'any';
-                sizeInput.value = tableData['size(nm)'][i] || '';
-                sizeInput.onchange = function() {
-                    tableData['size(nm)'][i] = this.value === '' ? null : parseFloat(this.value);
-                    updateData();
-                };
-                sizeCell.appendChild(sizeInput);
-                
-                const piCell = row.insertCell(2);
-                const piInput = document.createElement('input');
-                piInput.type = 'number';
-                piInput.step = 'any';
-                piInput.value = tableData['PI'][i] || '';
-                piInput.onchange = function() {
-                    tableData['PI'][i] = this.value === '' ? null : parseFloat(this.value);
-                    updateData();
-                };
-                piCell.appendChild(piInput);
+                columns.forEach(col => {
+                    const cell = row.insertCell();
+                    cell.className = 'px-4 py-2';
+                    
+                    if (col === 'No.') {
+                        cell.textContent = tableData[col][i];
+                    } else {
+                        const input = document.createElement('input');
+                        input.type = 'number';
+                        input.step = 'any';
+                        input.className = 'input w-full';
+                        input.value = tableData[col][i] || '';
+                        input.onchange = function() {
+                            tableData[col][i] = this.value === '' ? null : parseFloat(this.value);
+                            updateData();
+                        };
+                        cell.appendChild(input);
+                    }
+                });
             }
         }
         
         function updateData() {
             const sampleName = document.getElementById('sample_name').value;
+            const productionDate = document.getElementById('production_date').value;
+            const passCount = document.getElementById('pass_count').value;
             
             fetch('/update_data', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     sample_name: sampleName,
+                    production_date: productionDate,
+                    pass_count: parseInt(passCount),
                     table_data: tableData
                 })
             });
@@ -115,78 +404,33 @@
             });
         }
         
-        function calculate() {
-            updateData();
-            
-            fetch('/calculate', { method: 'POST' })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'error') {
-                    document.getElementById('results').innerHTML = 
-                        `<div class="error">오류: ${data.message}</div>`;
-                    return;
-                }
-                
-                let html = `<h2>계산 결과 (${data.sample_name})</h2>`;
-                
-                // 원본 데이터 테이블
-                html += `
-                    <div class="result-section">
-                        <h3>원본 데이터 (총 ${data.original_count}개)</h3>
-                        <table>
-                            <thead>
-                                <tr><th>No.</th><th>size(nm)</th><th>PI</th></tr>
-                            </thead>
-                            <tbody>
-                `;
-                
-                data.original_data.forEach(row => {
-                    html += `<tr><td>${row['No.']}</td><td>${row['size(nm)'].toFixed(3)}</td><td>${row['PI'].toFixed(3)}</td></tr>`;
-                });
-                
-                html += `</tbody></table></div>`;
-                
-                // 각 방법별 결과 테이블
-                ['zscore', 'iqr', 'mad'].forEach(method => {
-                    const result = data[method];
-                    html += `
-                        <div class="result-section">
-                            <h3>${result.name} 이상치 제거 결과 (${result.count}개)</h3>
-                            <table>
-                                <thead>
-                                    <tr><th>No.</th><th>size(nm)</th><th>PI</th></tr>
-                                </thead>
-                                <tbody>
-                    `;
-                    
-                    result.data.forEach(row => {
-                        html += `<tr><td>${row['No.']}</td><td>${row['size(nm)'].toFixed(3)}</td><td>${row['PI'].toFixed(3)}</td></tr>`;
-                    });
-                    
-                    html += `
-                                </tbody>
-                            </table>
-                            <div style="background-color: #e9ecef; padding: 10px; border-radius: 5px; margin: 10px 0;">
-                                <p><strong>size(nm) 평균/표준편차:</strong> ${result.size_mean.toFixed(3)} / ${result.size_std.toFixed(3)}</p>
-                                <p><strong>PI 평균/표준편차:</strong> ${result.pi_mean.toFixed(3)} / ${result.pi_std.toFixed(3)}</p>
-                            </div>
-                        </div>
-                    `;
-                });
-                
-                document.getElementById('results').innerHTML = html;
-                
-                // 계산 완료 후 다운로드 버튼 표시
-                document.getElementById('downloadBtn').style.display = 'inline-block';
-            })
-            .catch(error => {
-                document.getElementById('results').innerHTML = 
-                    `<div class="error">오류: ${error}</div>`;
-            });
+        function showAddColumnModal() {
+            document.getElementById('addColumnModal').classList.remove('hidden');
         }
         
-        function downloadCSV() {
-            window.location.href = '/download_csv';
+        function addColumn() {
+            const columnName = document.getElementById('new_column_name').value.trim();
+            if (!columnName) {
+                alert('컬럼 이름을 입력해주세요.');
+                return;
+            }
+            
+            fetch('/add_column', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ column_name: columnName })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    tableData = data.table_data;
+                    renderTable();
+                    closeModal('addColumnModal');
+                    document.getElementById('new_column_name').value = '';
+                } else {
+                    alert(data.message);
+                }
+            });
         }
         
         function resetData() {
@@ -199,19 +443,347 @@
                 .then(data => {
                     if (data.status === 'success') {
                         tableData = data.table_data;
-                        document.getElementById('sample_name').value = '';
+                        document.getElementById('sample_name').value = data.sample_name;
+                        document.getElementById('production_date').value = data.production_date;
+                        document.getElementById('pass_count').value = data.pass_count;
                         document.getElementById('results').innerHTML = '';
-                        document.getElementById('downloadBtn').style.display = 'none';
+                        document.getElementById('downloadBtn').classList.add('hidden');
                         renderTable();
                     }
-                })
-                .catch(error => {
-                    alert('초기화 중 오류가 발생했습니다: ' + error);
                 });
             }
         }
         
+        function updateThresholdDisplay(method, value) {
+            document.getElementById(method + '_value').textContent = parseFloat(value).toFixed(1);
+        }
+        
+        function calculateWithThresholds() {
+            updateData();
+            
+            const thresholds = {
+                zscore: parseFloat(document.getElementById('zscore_slider').value),
+                iqr: parseFloat(document.getElementById('iqr_slider').value),
+                mad: parseFloat(document.getElementById('mad_slider').value)
+            };
+            
+            fetch('/calculate_with_thresholds', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ thresholds: thresholds })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'error') {
+                    document.getElementById('results').innerHTML = 
+                        `<div class="card p-4"><div class="text-destructive">오류: ${data.message}</div></div>`;
+                    return;
+                }
+                
+                displayResults(data);
+                document.getElementById('downloadBtn').classList.remove('hidden');
+            });
+        }
+        
+        function displayResults(data) {
+            let html = `
+                <div class="card p-6">
+                    <h2 class="text-xl font-semibold mb-4">계산 결과</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div><strong>샘플명:</strong> ${data.sample_name}</div>
+                        <div><strong>생산일자:</strong> ${data.production_date}</div>
+                        <div><strong>패스:</strong> ${data.pass_count}</div>
+                    </div>
+                </div>
+            `;
+            
+            // 시각화
+            if (data.scatter_plot) {
+                html += `
+                    <div class="card p-6">
+                        <h3 class="text-lg font-semibold mb-4">데이터 시각화</h3>
+                        <div id="scatter_plot" class="w-full h-96"></div>
+                    </div>
+                `;
+            }
+            
+            // 원본 데이터
+            html += `
+                <div class="card p-6">
+                    <h3 class="text-lg font-semibold mb-4">원본 데이터 (총 ${data.original_count}개)</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full border-collapse border">
+                            <thead class="bg-muted">
+                                <tr>
+                                    <th class="border px-3 py-2">No.</th>
+                                    <th class="border px-3 py-2">size(nm)</th>
+                                    <th class="border px-3 py-2">PI</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y">
+            `;
+            
+            data.original_data.forEach(row => {
+                html += `<tr><td class="border px-3 py-2">${row['No.']}</td><td class="border px-3 py-2">${row['size(nm)'].toFixed(3)}</td><td class="border px-3 py-2">${row['PI'].toFixed(3)}</td></tr>`;
+            });
+            
+            html += `</tbody></table></div></div>`;
+            
+            // 각 방법별 결과
+            ['zscore', 'iqr', 'mad'].forEach(method => {
+                const result = data[method];
+                html += `
+                    <div class="card p-6">
+                        <h3 class="text-lg font-semibold mb-4">${result.name} 이상치 제거 결과</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 text-sm">
+                            <div class="bg-muted p-3 rounded">
+                                <div class="font-medium">임계값</div>
+                                <div class="text-lg">${result.threshold}</div>
+                            </div>
+                            <div class="bg-muted p-3 rounded">
+                                <div class="font-medium">처리된 데이터</div>
+                                <div class="text-lg">${result.count}개</div>
+                            </div>
+                            <div class="bg-muted p-3 rounded">
+                                <div class="font-medium">제거된 이상치</div>
+                                <div class="text-lg">${result.outliers_count}개</div>
+                            </div>
+                            <div class="bg-muted p-3 rounded">
+                                <div class="font-medium">처리율</div>
+                                <div class="text-lg">${((result.count / data.original_count) * 100).toFixed(1)}%</div>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div class="bg-secondary p-4 rounded">
+                                <h4 class="font-medium mb-2">Size(nm) 통계</h4>
+                                <div>평균: ${result.size_mean.toFixed(3)}</div>
+                                <div>표준편차: ${result.size_std.toFixed(3)}</div>
+                            </div>
+                            <div class="bg-secondary p-4 rounded">
+                                <h4 class="font-medium mb-2">PI 통계</h4>
+                                <div>평균: ${result.pi_mean.toFixed(3)}</div>
+                                <div>표준편차: ${result.pi_std.toFixed(3)}</div>
+                            </div>
+                        </div>
+                `;
+                
+                if (result.data.length > 0) {
+                    html += `
+                        <div class="overflow-x-auto">
+                            <table class="w-full border-collapse border text-sm">
+                                <thead class="bg-muted">
+                                    <tr>
+                                        <th class="border px-2 py-1">No.</th>
+                                        <th class="border px-2 py-1">size(nm)</th>
+                                        <th class="border px-2 py-1">PI</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y">
+                    `;
+                    
+                    result.data.forEach(row => {
+                        html += `<tr><td class="border px-2 py-1">${row['No.']}</td><td class="border px-2 py-1">${row['size(nm)'].toFixed(3)}</td><td class="border px-2 py-1">${row['PI'].toFixed(3)}</td></tr>`;
+                    });
+                    
+                    html += `</tbody></table></div>`;
+                }
+                
+                html += `</div>`;
+            });
+            
+            document.getElementById('results').innerHTML = html;
+            
+            // 시각화 렌더링
+            if (data.scatter_plot) {
+                setTimeout(() => {
+                    Plotly.newPlot('scatter_plot', JSON.parse(data.scatter_plot).data, JSON.parse(data.scatter_plot).layout);
+                }, 100);
+            }
+        }
+        
+        function uploadFile() {
+            const fileInput = document.getElementById('file_upload');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('파일을 선택해주세요.');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            fetch('/upload_file', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    tableData = data.table_data;
+                    renderTable();
+                    alert(data.message);
+                } else {
+                    alert(data.message);
+                }
+            });
+        }
+        
+        function showSaveModal() {
+            document.getElementById('saveModal').classList.remove('hidden');
+        }
+        
+        function saveDataset() {
+            const datasetName = document.getElementById('dataset_name').value.trim();
+            if (!datasetName) {
+                alert('데이터셋 이름을 입력해주세요.');
+                return;
+            }
+            
+            updateData();
+            
+            fetch('/save_dataset', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ dataset_name: datasetName })
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+                if (data.status === 'success') {
+                    closeModal('saveModal');
+                    document.getElementById('dataset_name').value = '';
+                    location.reload(); // 저장된 데이터셋 목록 업데이트
+                }
+            });
+        }
+        
+        function showLoadModal() {
+            document.getElementById('loadModal').classList.remove('hidden');
+        }
+        
+        function loadDataset() {
+            const datasetName = document.getElementById('load_dataset_select').value;
+            if (!datasetName) {
+                alert('데이터셋을 선택해주세요.');
+                return;
+            }
+            
+            fetch('/load_dataset', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ dataset_name: datasetName })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    tableData = data.table_data;
+                    document.getElementById('sample_name').value = data.sample_name;
+                    document.getElementById('production_date').value = data.production_date;
+                    document.getElementById('pass_count').value = data.pass_count;
+                    renderTable();
+                    closeModal('loadModal');
+                } else {
+                    alert(data.message);
+                }
+            });
+        }
+        
+        function showCompareModal() {
+            document.getElementById('compareModal').classList.remove('hidden');
+        }
+        
+        function compareDatasets() {
+            const selected = Array.from(document.querySelectorAll('input[name="compare_datasets"]:checked'))
+                                 .map(cb => cb.value);
+            
+            if (selected.length < 2) {
+                alert('비교하려면 최소 2개의 데이터셋을 선택해주세요.');
+                return;
+            }
+            
+            fetch('/compare_datasets', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ dataset_names: selected })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    displayComparisonResults(data);
+                    closeModal('compareModal');
+                } else {
+                    alert(data.message);
+                }
+            });
+        }
+        
+        function displayComparisonResults(data) {
+            let html = `
+                <div class="card p-6">
+                    <h2 class="text-xl font-semibold mb-4">데이터셋 비교 결과</h2>
+                    <div id="comparison_plot" class="w-full h-96 mb-6"></div>
+                    
+                    <h3 class="text-lg font-semibold mb-4">통계 요약</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full border-collapse border">
+                            <thead class="bg-muted">
+                                <tr>
+                                    <th class="border px-3 py-2">데이터셋</th>
+                                    <th class="border px-3 py-2">데이터 개수</th>
+                                    <th class="border px-3 py-2">Size 평균</th>
+                                    <th class="border px-3 py-2">Size 표준편차</th>
+                                    <th class="border px-3 py-2">PI 평균</th>
+                                    <th class="border px-3 py-2">PI 표준편차</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y">
+            `;
+            
+            Object.keys(data.stats_summary).forEach(dataset => {
+                const stats = data.stats_summary[dataset];
+                html += `
+                    <tr>
+                        <td class="border px-3 py-2 font-medium">${dataset}</td>
+                        <td class="border px-3 py-2">${stats.count}</td>
+                        <td class="border px-3 py-2">${stats.size_mean.toFixed(3)}</td>
+                        <td class="border px-3 py-2">${stats.size_std.toFixed(3)}</td>
+                        <td class="border px-3 py-2">${stats.pi_mean.toFixed(3)}</td>
+                        <td class="border px-3 py-2">${stats.pi_std.toFixed(3)}</td>
+                    </tr>
+                `;
+            });
+            
+            html += `</tbody></table></div></div>`;
+            
+            document.getElementById('results').innerHTML = html;
+            
+            // 비교 플롯 렌더링
+            setTimeout(() => {
+                Plotly.newPlot('comparison_plot', JSON.parse(data.comparison_plot).data, JSON.parse(data.comparison_plot).layout);
+            }, 100);
+        }
+        
+        function downloadCSV() {
+            window.location.href = '/download_csv';
+        }
+        
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+        
+        // Event listeners
         document.getElementById('sample_name').addEventListener('input', updateData);
+        document.getElementById('production_date').addEventListener('change', updateData);
+        document.getElementById('pass_count').addEventListener('change', updateData);
+        
+        // Close modals when clicking outside
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('fixed')) {
+                e.target.classList.add('hidden');
+            }
+        });
     </script>
 </body>
 </html>
