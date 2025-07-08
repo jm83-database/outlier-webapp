@@ -124,7 +124,8 @@ def index():
                 'No.': list(range(1, default_rows + 1)),
                 'size(nm)': [None] * default_rows,
                 'PI': [None] * default_rows
-            }
+            },
+            'pass_averages': []  # 패스별 평균값 저장
         }
     
     clean_table_data = clean_data_for_json(session['current_dataset']['table_data'])
@@ -162,11 +163,17 @@ def update_data():
                             cleaned_values.append(None)
                 table_data[key] = cleaned_values
         
+        # 패스 데이터 초기화 옵션 처리
+        current_dataset = session.get('current_dataset', {})
+        if data.get('clear_passes'):
+            current_dataset['pass_averages'] = []
+        
         session['current_dataset'] = {
             'sample_name': sample_name,
             'production_date': production_date,
             'pass_count': pass_count,
-            'table_data': table_data
+            'table_data': table_data,
+            'pass_averages': current_dataset.get('pass_averages', [])
         }
         
         return jsonify({'status': 'success'})
@@ -227,7 +234,8 @@ def reset_data():
                 'No.': list(range(1, default_rows + 1)),
                 'size(nm)': [None] * default_rows,
                 'PI': [None] * default_rows
-            }
+            },
+            'pass_averages': []  # 패스별 평균값 저장
         }
         
         if 'last_results' in session:
@@ -517,6 +525,478 @@ def upload_file():
                 return jsonify({'status': 'error', 'message': f'파일 읽기 오류: {str(e)}'})
         
         return jsonify({'status': 'error', 'message': '지원되지 않는 파일 형식입니다. (xlsx, xls, csv만 지원)'})
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
+@app.route('/add_pass_average', methods=['POST'])
+def add_pass_average():
+    try:
+        data = request.get_json()
+        pass_number = data.get('pass_number')
+        size_avg = data.get('size_avg')
+        pi_avg = data.get('pi_avg')
+        removal_method = data.get('removal_method', '')
+        threshold_used = data.get('threshold_used', '')
+        viscosity = data.get('viscosity')  # 점도 값 추가
+        
+        if not all([pass_number, size_avg is not None, pi_avg is not None]):
+            return jsonify({'status': 'error', 'message': '필수 데이터가 누락되었습니다.'})
+        
+        current_dataset = session.get('current_dataset', {})
+        if 'pass_averages' not in current_dataset:
+            current_dataset['pass_averages'] = []
+        
+        # 중복 패스 번호 체크
+        existing_passes = [p['pass_number'] for p in current_dataset['pass_averages']]
+        if pass_number in existing_passes:
+            return jsonify({'status': 'error', 'message': f'패스 {pass_number}이 이미 존재합니다.'})
+        
+        # 새 패스 데이터 추가
+        new_pass = {
+            'pass_number': int(pass_number),
+            'size_avg': float(size_avg),
+            'pi_avg': float(pi_avg),
+            'removal_method': removal_method,
+            'threshold_used': threshold_used,
+            'viscosity': float(viscosity) if viscosity is not None else None,  # 점도 값 저장
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+        
+        current_dataset['pass_averages'].append(new_pass)
+        session['current_dataset'] = current_dataset
+        
+        return jsonify({
+            'status': 'success',
+            'message': f'패스 {pass_number} 평균값이 추가되었습니다.',
+            'pass_averages': current_dataset['pass_averages']
+        })
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
+@app.route('/delete_pass_average', methods=['POST'])
+def delete_pass_average():
+    try:
+        data = request.get_json()
+        pass_number = data.get('pass_number')
+        
+        if pass_number is None:
+            return jsonify({'status': 'error', 'message': '패스 번호가 필요합니다.'})
+        
+        current_dataset = session.get('current_dataset', {})
+        if 'pass_averages' not in current_dataset:
+            return jsonify({'status': 'error', 'message': '삭제할 패스 데이터가 없습니다.'})
+        
+        # 해당 패스 번호 삭제
+        original_length = len(current_dataset['pass_averages'])
+        current_dataset['pass_averages'] = [
+            p for p in current_dataset['pass_averages'] 
+            if p['pass_number'] != int(pass_number)
+        ]
+        
+        if len(current_dataset['pass_averages']) == original_length:
+            return jsonify({'status': 'error', 'message': f'패스 {pass_number}을 찾을 수 없습니다.'})
+        
+        session['current_dataset'] = current_dataset
+        
+        return jsonify({
+            'status': 'success',
+            'message': f'패스 {pass_number}이 삭제되었습니다.',
+            'pass_averages': current_dataset['pass_averages']
+        })
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
+@app.route('/get_pass_trend_data', methods=['GET'])
+def get_pass_trend_data():
+    try:
+        current_dataset = session.get('current_dataset', {})
+        pass_averages = current_dataset.get('pass_averages', [])
+        
+        if not pass_averages:
+            return jsonify({'status': 'error', 'message': '패스 데이터가 없습니다.'})
+        
+        # 패스 번호 순으로 정렬
+        sorted_passes = sorted(pass_averages, key=lambda x: x['pass_number'])
+        
+        # 트렌드 차트용 데이터 준비
+        pass_numbers = [p['pass_number'] for p in sorted_passes]
+        size_avgs = [p['size_avg'] for p in sorted_passes]
+        pi_avgs = [p['pi_avg'] for p in sorted_passes]
+        
+        # Plotly 차트 데이터 생성
+        fig_size = go.Figure()
+        fig_size.add_trace(go.Scatter(
+            x=pass_numbers,
+            y=size_avgs,
+            mode='lines+markers',
+            name='Size(μm) 평균',
+            line=dict(color='blue', width=3),
+            marker=dict(size=8)
+        ))
+        fig_size.update_layout(
+            title='패스별 Size(μm) 평균값 트렌드',
+            xaxis_title='패스 번호',
+            yaxis_title='Size(μm) 평균',
+            height=400
+        )
+        
+        fig_pi = go.Figure()
+        fig_pi.add_trace(go.Scatter(
+            x=pass_numbers,
+            y=pi_avgs,
+            mode='lines+markers',
+            name='PI 평균',
+            line=dict(color='red', width=3),
+            marker=dict(size=8)
+        ))
+        fig_pi.update_layout(
+            title='패스별 PI 평균값 트렌드',
+            xaxis_title='패스 번호',
+            yaxis_title='PI 평균',
+            height=400
+        )
+        
+        # 상관관계 차트
+        fig_correlation = go.Figure()
+        fig_correlation.add_trace(go.Scatter(
+            x=size_avgs,
+            y=pi_avgs,
+            mode='markers+text',
+            text=[f'P{p}' for p in pass_numbers],
+            textposition='top center',
+            marker=dict(size=10, color=pass_numbers, colorscale='viridis'),
+            name='Size vs PI'
+        ))
+        fig_correlation.update_layout(
+            title='Size(μm) vs PI 상관관계 (패스별)',
+            xaxis_title='Size(μm) 평균',
+            yaxis_title='PI 평균',
+            height=400
+        )
+        
+        # 고급 통계 계산
+        stats = {
+            'pass_count': len(sorted_passes),
+            'size_trend': 'stable',
+            'pi_trend': 'stable',
+            'size_cv': (np.std(size_avgs) / np.mean(size_avgs) * 100) if size_avgs else 0,
+            'pi_cv': (np.std(pi_avgs) / np.mean(pi_avgs) * 100) if pi_avgs else 0,
+            'size_mean': np.mean(size_avgs) if size_avgs else 0,
+            'size_std': np.std(size_avgs) if size_avgs else 0,
+            'size_min': np.min(size_avgs) if size_avgs else 0,
+            'size_max': np.max(size_avgs) if size_avgs else 0,
+            'pi_mean': np.mean(pi_avgs) if pi_avgs else 0,
+            'pi_std': np.std(pi_avgs) if pi_avgs else 0,
+            'pi_min': np.min(pi_avgs) if pi_avgs else 0,
+            'pi_max': np.max(pi_avgs) if pi_avgs else 0
+        }
+        
+        # 상관계수 계산
+        if len(size_avgs) >= 3 and len(pi_avgs) >= 3:
+            correlation = np.corrcoef(size_avgs, pi_avgs)[0, 1]
+            stats['correlation'] = correlation if not np.isnan(correlation) else 0
+        else:
+            stats['correlation'] = 0
+        
+        # 트렌드 계산 (리니어 회귀 기반)
+        if len(size_avgs) >= 3:
+            # 리니어 회귀로 기울기 계산
+            x = np.array(pass_numbers)
+            y_size = np.array(size_avgs)
+            slope_size = np.polyfit(x, y_size, 1)[0]
+            
+            if abs(slope_size) > 0.01:  # 임계값 조정
+                if slope_size > 0:
+                    stats['size_trend'] = 'increasing'
+                else:
+                    stats['size_trend'] = 'decreasing'
+            stats['size_slope'] = float(slope_size)
+        else:
+            stats['size_slope'] = 0
+                
+        if len(pi_avgs) >= 3:
+            x = np.array(pass_numbers)
+            y_pi = np.array(pi_avgs)
+            slope_pi = np.polyfit(x, y_pi, 1)[0]
+            
+            if abs(slope_pi) > 0.001:  # PI는 더 작은 임계값
+                if slope_pi > 0:
+                    stats['pi_trend'] = 'increasing'
+                else:
+                    stats['pi_trend'] = 'decreasing'
+            stats['pi_slope'] = float(slope_pi)
+        else:
+            stats['pi_slope'] = 0
+        
+        # 공정 능력 지수 (Cpk 근사치)
+        if len(size_avgs) >= 6:  # 충분한 데이터가 있을 때
+            size_mean = np.mean(size_avgs)
+            size_std = np.std(size_avgs)
+            if size_std > 0:
+                # 가정: 사양 3시그마 공정 능력
+                stats['size_capability'] = (3 * size_std) / size_mean * 100
+            else:
+                stats['size_capability'] = 0
+        else:
+            stats['size_capability'] = 0
+        
+        return jsonify({
+            'status': 'success',
+            'size_trend_chart': json.dumps(fig_size, cls=PlotlyJSONEncoder),
+            'pi_trend_chart': json.dumps(fig_pi, cls=PlotlyJSONEncoder),
+            'correlation_chart': json.dumps(fig_correlation, cls=PlotlyJSONEncoder),
+            'statistics': stats,
+            'pass_data': sorted_passes
+        })
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
+@app.route('/get_viscosity_correlation_data', methods=['GET'])
+def get_viscosity_correlation_data():
+    """점도와 size(μm) 간의 상관관계 분석 - draw_plot.py 스타일"""
+    try:
+        current_dataset = session.get('current_dataset', {})
+        pass_averages = current_dataset.get('pass_averages', [])
+        sample_name = current_dataset.get('sample_name', 'Sample')
+        production_date = current_dataset.get('production_date', '')
+        
+        # 점도 데이터가 있는 패스만 필터링
+        viscosity_data = []
+        for pass_data in pass_averages:
+            if pass_data.get('viscosity') is not None:
+                viscosity_data.append({
+                    'pass_number': pass_data['pass_number'],
+                    'size_avg': pass_data['size_avg'],  # size(nm)를 µm로 변환
+                    'viscosity': pass_data['viscosity']
+                })
+        
+        if len(viscosity_data) < 2:
+            return jsonify({'status': 'error', 'message': '점도 상관관계 분석을 위해서는 최소 2개의 점도 데이터가 필요합니다.'})
+        
+        # 기준값 데이터 (draw_plot.py 스타일)
+        reference_data = [
+            {'name': 'UHV', 'viscosity': 11780, 'size_avg': 220.2},
+            {'name': 'HV', 'viscosity': 8615, 'size_avg': 185.2},
+            {'name': 'LV', 'viscosity': 4948, 'size_avg': 157.8}
+        ]
+        
+        # 상관관계 차트 생성 (draw_plot.py 스타일)
+        fig = go.Figure()
+        
+        # 기준값 플롯 (빨간색)
+        for ref in reference_data:
+            fig.add_trace(go.Scatter(
+                x=[ref['viscosity']],
+                y=[ref['size_avg']],
+                mode='markers+text',
+                text=[ref['name']],
+                textposition='top center',
+                marker=dict(size=15, color='red', symbol='circle', 
+                           line=dict(width=2, color='black')),
+                name=f"Reference - {ref['name']}" if ref == reference_data[0] else '',
+                showlegend=ref == reference_data[0],
+                legendgroup='reference'
+            ))
+        
+        # 생산 데이터 플롯 (파란색/녹색)
+        colors = ['blue', 'green']
+        color_idx = 0 if production_date == '2025-06-24' else 1
+        
+        viscosities = [d['viscosity'] for d in viscosity_data]
+        sizes = [d['size_avg'] for d in viscosity_data]
+        pass_numbers = [d['pass_number'] for d in viscosity_data]
+        
+        fig.add_trace(go.Scatter(
+            x=viscosities,
+            y=sizes,
+            mode='markers+text',
+            text=[str(p) for p in pass_numbers],
+            textposition='top center',
+            marker=dict(size=10, color=colors[color_idx], symbol='circle',
+                       line=dict(width=2, color='black')),
+            name=f'{production_date}',
+            showlegend=True
+        ))
+        
+        # 레이아웃 설정
+        fig.update_layout(
+            title=f'Production Data vs Reference Values - Viscosity vs Size<br>{sample_name}',
+            xaxis_title='Viscosity (10 s⁻¹, cP)',
+            yaxis_title='Size (μm)',
+            height=600,
+            width=800,
+            font=dict(size=12),
+            showlegend=True,
+            legend=dict(
+                x=1.02,
+                y=1,
+                xanchor='left',
+                yanchor='top'
+            )
+        )
+        
+        # 범례에 기준값 추가
+        fig.add_trace(go.Scatter(
+            x=[None], y=[None],
+            mode='markers',
+            marker=dict(size=15, color='red', symbol='circle',
+                       line=dict(width=2, color='black')),
+            name='Reference Values',
+            showlegend=True,
+            legendgroup='reference'
+        ))
+        
+        # 상관계수 계산
+        if len(viscosities) >= 2:
+            correlation = np.corrcoef(viscosities, sizes)[0, 1]
+            correlation = correlation if not np.isnan(correlation) else 0
+        else:
+            correlation = 0
+        
+        # 통계 정보
+        stats = {
+            'correlation': float(correlation),
+            'data_count': len(viscosity_data),
+            'viscosity_mean': np.mean(viscosities),
+            'viscosity_std': np.std(viscosities),
+            'size_mean': np.mean(sizes),
+            'size_std': np.std(sizes),
+            'sample_name': sample_name,
+            'production_date': production_date
+        }
+        
+        return jsonify({
+            'status': 'success',
+            'viscosity_correlation_chart': json.dumps(fig, cls=PlotlyJSONEncoder),
+            'statistics': stats,
+            'viscosity_data': viscosity_data,
+            'reference_data': reference_data
+        })
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
+@app.route('/add_viscosity_data', methods=['POST'])
+def add_viscosity_data():
+    """점도 데이터 추가 (향후 확장용)"""
+    try:
+        data = request.get_json()
+        pass_number = data.get('pass_number')
+        viscosity = data.get('viscosity')
+        temperature = data.get('temperature', 25)  # 기본값 25도
+        shear_rate = data.get('shear_rate', 100)   # 기본값 100 s^-1
+        
+        if not all([pass_number, viscosity]):
+            return jsonify({'status': 'error', 'message': '패스 번호와 점도 값이 필요합니다.'})
+        
+        current_dataset = session.get('current_dataset', {})
+        pass_averages = current_dataset.get('pass_averages', [])
+        
+        # 해당 패스 찾기
+        for pass_data in pass_averages:
+            if pass_data['pass_number'] == int(pass_number):
+                pass_data['viscosity_data'] = {
+                    'viscosity': float(viscosity),
+                    'temperature': float(temperature),
+                    'shear_rate': float(shear_rate),
+                    'measurement_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                }
+                break
+        else:
+            return jsonify({'status': 'error', 'message': f'패스 {pass_number}을 찾을 수 없습니다.'})
+        
+        session['current_dataset'] = current_dataset
+        
+        return jsonify({
+            'status': 'success',
+            'message': f'패스 {pass_number}에 점도 데이터가 추가되었습니다.',
+            'pass_averages': pass_averages
+        })
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
+@app.route('/get_viscosity_correlation', methods=['GET'])
+def get_viscosity_correlation():
+    """점도와 입자 특성 간 상관관계 분석 (향후 확장용)"""
+    try:
+        current_dataset = session.get('current_dataset', {})
+        pass_averages = current_dataset.get('pass_averages', [])
+        
+        # 점도 데이터가 있는 패스만 필터링
+        viscosity_data = []
+        for pass_data in pass_averages:
+            if 'viscosity_data' in pass_data:
+                viscosity_data.append({
+                    'pass_number': pass_data['pass_number'],
+                    'size_avg': pass_data['size_avg'],
+                    'pi_avg': pass_data['pi_avg'],
+                    'viscosity': pass_data['viscosity_data']['viscosity'],
+                    'temperature': pass_data['viscosity_data']['temperature']
+                })
+        
+        if len(viscosity_data) < 3:
+            return jsonify({'status': 'error', 'message': '상관관계 분석을 위해서는 최소 3개의 점도 데이터가 필요합니다.'})
+        
+        # 상관관계 차트 생성
+        sizes = [d['size_avg'] for d in viscosity_data]
+        pis = [d['pi_avg'] for d in viscosity_data]
+        viscosities = [d['viscosity'] for d in viscosity_data]
+        
+        # Size vs Viscosity
+        fig_size_visc = go.Figure()
+        fig_size_visc.add_trace(go.Scatter(
+            x=sizes,
+            y=viscosities,
+            mode='markers+text',
+            text=[f'P{d["pass_number"]}' for d in viscosity_data],
+            textposition='top center',
+            marker=dict(size=10, color='blue'),
+            name='Size vs Viscosity'
+        ))
+        fig_size_visc.update_layout(
+            title='Size(μm) vs Viscosity 상관관계',
+            xaxis_title='Size(μm) 평균',
+            yaxis_title='Viscosity (cP)',
+            height=400
+        )
+        
+        # PI vs Viscosity
+        fig_pi_visc = go.Figure()
+        fig_pi_visc.add_trace(go.Scatter(
+            x=pis,
+            y=viscosities,
+            mode='markers+text',
+            text=[f'P{d["pass_number"]}' for d in viscosity_data],
+            textposition='top center',
+            marker=dict(size=10, color='red'),
+            name='PI vs Viscosity'
+        ))
+        fig_pi_visc.update_layout(
+            title='PI vs Viscosity 상관관계',
+            xaxis_title='PI 평균',
+            yaxis_title='Viscosity (cP)',
+            height=400
+        )
+        
+        # 상관계수 계산
+        size_visc_corr = np.corrcoef(sizes, viscosities)[0, 1] if len(sizes) > 1 else 0
+        pi_visc_corr = np.corrcoef(pis, viscosities)[0, 1] if len(pis) > 1 else 0
+        
+        return jsonify({
+            'status': 'success',
+            'size_viscosity_chart': json.dumps(fig_size_visc, cls=PlotlyJSONEncoder),
+            'pi_viscosity_chart': json.dumps(fig_pi_visc, cls=PlotlyJSONEncoder),
+            'correlations': {
+                'size_viscosity': float(size_visc_corr) if not np.isnan(size_visc_corr) else 0,
+                'pi_viscosity': float(pi_visc_corr) if not np.isnan(pi_visc_corr) else 0
+            },
+            'data_count': len(viscosity_data)
+        })
         
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)})
