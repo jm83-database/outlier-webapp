@@ -152,7 +152,7 @@
                     <h1 class="text-3xl font-bold mb-2">Outlier Data Management System</h1>
                     <p class="text-muted-foreground">실험 및 생산 데이터의 이상치 자동 검출·제거, 통계, 시각화 및 비교 분석</p>
                 </div>
-                <button onclick="showHelpModal()" class="btn btn-outline btn-sm flex items-center gap-2">
+                <button onclick="showHelpModal()" class="btn btn-outline btn-sm flex items-center gap-2 bg-gray-500 hover:bg-gray-600 text-white border-gray-500">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
@@ -170,15 +170,15 @@
                 <div>
                     <label class="block text-sm font-medium mb-2">샘플명</label>
                     <input type="text" id="sample_name" value="{{ sample_name }}" 
-                           placeholder="샘플 이름을 입력하세요" class="input">
+                           placeholder="샘플 이름을 입력하세요" class="input bg-blue-50 border-blue-200 focus:border-blue-500">
                 </div>
                 <div>
                     <label class="block text-sm font-medium mb-2">생산일자</label>
-                    <input type="date" id="production_date" value="{{ production_date }}" class="input">
+                    <input type="date" id="production_date" value="{{ production_date }}" class="input bg-green-50 border-green-200 focus:border-green-500">
                 </div>
                 <div>
                     <label class="block text-sm font-medium mb-2">패스 수</label>
-                    <input type="number" id="pass_count" value="{{ pass_count }}" min="1" class="input">
+                    <input type="number" id="pass_count" value="{{ pass_count }}" min="1" class="input bg-purple-50 border-purple-200 focus:border-purple-500">
                 </div>
             </div>
 
@@ -187,18 +187,18 @@
                 <label class="block text-sm font-medium mb-2">파일 업로드 (Excel/CSV)</label>
                 <div class="flex items-center gap-2">
                     <input type="file" id="file_upload" accept=".xlsx,.xls,.csv" class="input">
-                    <button onclick="uploadFile()" class="btn btn-secondary btn-default">업로드</button>
+                    <button onclick="uploadFile()" class="btn btn-primary btn-default bg-orange-500 hover:bg-orange-600 text-white">업로드</button>
                 </div>
             </div>
 
             <!-- Table Controls -->
             <div class="flex flex-wrap gap-2 mb-4">
-                <button onclick="addRow()" class="btn btn-secondary btn-sm">행 추가</button>
-                <button onclick="showAddColumnModal()" class="btn btn-secondary btn-sm">컬럼 추가</button>
-                <button onclick="resetData()" class="btn btn-destructive btn-sm">초기화</button>
-                <button onclick="showSaveModal()" class="btn btn-outline btn-sm">데이터셋 저장</button>
-                <button onclick="showLoadModal()" class="btn btn-outline btn-sm">데이터셋 불러오기</button>
-                <button onclick="showCompareModal()" class="btn btn-outline btn-sm">데이터셋 비교</button>
+                <button onclick="addRow()" class="btn btn-primary btn-sm bg-blue-500 hover:bg-blue-600 text-white">행 추가</button>
+                <button onclick="showAddColumnModal()" class="btn btn-primary btn-sm bg-green-500 hover:bg-green-600 text-white">컬럼 추가</button>
+                <button onclick="resetData()" class="btn btn-destructive btn-sm bg-red-500 hover:bg-red-600 text-white">초기화</button>
+                <button onclick="showSaveModal()" class="btn btn-outline btn-sm bg-purple-500 hover:bg-purple-600 text-white border-purple-500">데이터셋 저장</button>
+                <button onclick="showLoadModal()" class="btn btn-outline btn-sm bg-yellow-500 hover:bg-yellow-600 text-white border-yellow-500">데이터셋 불러오기</button>
+                <button onclick="showCompareModal()" class="btn btn-outline btn-sm bg-indigo-500 hover:bg-indigo-600 text-white border-indigo-500">데이터셋 비교</button>
             </div>
 
             <!-- Data Table -->
@@ -261,8 +261,8 @@
             </div>
 
             <div class="mt-6 flex flex-wrap gap-2">
-                <button onclick="calculateWithThresholds()" class="btn btn-primary btn-default">이상치 검출 및 계산</button>
-                <button id="downloadBtn" onclick="downloadCSV()" class="btn btn-secondary btn-default hidden">결과 다운로드 (CSV)</button>
+                <button onclick="calculateWithThresholds()" class="btn btn-primary btn-default bg-blue-600 hover:bg-blue-700 text-white">이상치 검출 및 계산</button>
+                <button id="downloadBtn" onclick="downloadCSV()" class="btn btn-secondary btn-default hidden bg-green-600 hover:bg-green-700 text-white">결과 다운로드 (CSV)</button>
             </div>
         </div>
 
@@ -271,50 +271,50 @@
 
         <!-- Modals -->
         <!-- Add Column Modal -->
-        <div id="addColumnModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
-            <div class="card p-6 w-96 mx-4">
-                <h3 class="text-lg font-semibold mb-4">새 컬럼 추가</h3>
-                <input type="text" id="new_column_name" placeholder="컬럼 이름" class="input mb-4">
+        <div id="addColumnModal" class="fixed inset-0 bg-black bg-opacity-70 hidden z-50 flex items-center justify-center">
+            <div class="card p-6 w-96 mx-4 bg-white border-4 border-blue-300 shadow-2xl">
+                <h3 class="text-lg font-semibold mb-4 text-blue-700">새 컬럼 추가</h3>
+                <input type="text" id="new_column_name" placeholder="컬럼 이름" class="input mb-4 bg-blue-50 border-blue-300">
                 <div class="flex gap-2">
-                    <button onclick="addColumn()" class="btn btn-primary btn-default flex-1">추가</button>
-                    <button onclick="closeModal('addColumnModal')" class="btn btn-outline btn-default">취소</button>
+                    <button onclick="addColumn()" class="btn btn-primary btn-default flex-1 bg-blue-500 hover:bg-blue-600 text-white">추가</button>
+                    <button onclick="closeModal('addColumnModal')" class="btn btn-outline btn-default bg-gray-500 hover:bg-gray-600 text-white">취소</button>
                 </div>
             </div>
         </div>
 
         <!-- Save Dataset Modal -->
-        <div id="saveModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
-            <div class="card p-6 w-96 mx-4">
-                <h3 class="text-lg font-semibold mb-4">데이터셋 저장</h3>
-                <input type="text" id="dataset_name" placeholder="데이터셋 이름" class="input mb-4">
+        <div id="saveModal" class="fixed inset-0 bg-black bg-opacity-70 hidden z-50 flex items-center justify-center">
+            <div class="card p-6 w-96 mx-4 bg-white border-4 border-purple-300 shadow-2xl">
+                <h3 class="text-lg font-semibold mb-4 text-purple-700">데이터셋 저장</h3>
+                <input type="text" id="dataset_name" placeholder="데이터셋 이름" class="input mb-4 bg-purple-50 border-purple-300">
                 <div class="flex gap-2">
-                    <button onclick="saveDataset()" class="btn btn-primary btn-default flex-1">저장</button>
-                    <button onclick="closeModal('saveModal')" class="btn btn-outline btn-default">취소</button>
+                    <button onclick="saveDataset()" class="btn btn-primary btn-default flex-1 bg-purple-500 hover:bg-purple-600 text-white">저장</button>
+                    <button onclick="closeModal('saveModal')" class="btn btn-outline btn-default bg-gray-500 hover:bg-gray-600 text-white">취소</button>
                 </div>
             </div>
         </div>
 
         <!-- Load Dataset Modal -->
-        <div id="loadModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
-            <div class="card p-6 w-96 mx-4">
-                <h3 class="text-lg font-semibold mb-4">데이터셋 불러오기</h3>
-                <select id="load_dataset_select" class="input mb-4">
+        <div id="loadModal" class="fixed inset-0 bg-black bg-opacity-70 hidden z-50 flex items-center justify-center">
+            <div class="card p-6 w-96 mx-4 bg-white border-4 border-yellow-300 shadow-2xl">
+                <h3 class="text-lg font-semibold mb-4 text-yellow-700">데이터셋 불러오기</h3>
+                <select id="load_dataset_select" class="input mb-4 bg-yellow-50 border-yellow-300">
                     <option value="">데이터셋 선택</option>
                     {% for dataset in saved_datasets %}
                     <option value="{{ dataset }}">{{ dataset }}</option>
                     {% endfor %}
                 </select>
                 <div class="flex gap-2">
-                    <button onclick="loadDataset()" class="btn btn-primary btn-default flex-1">불러오기</button>
-                    <button onclick="closeModal('loadModal')" class="btn btn-outline btn-default">취소</button>
+                    <button onclick="loadDataset()" class="btn btn-primary btn-default flex-1 bg-yellow-500 hover:bg-yellow-600 text-white">불러오기</button>
+                    <button onclick="closeModal('loadModal')" class="btn btn-outline btn-default bg-gray-500 hover:bg-gray-600 text-white">취소</button>
                 </div>
             </div>
         </div>
 
         <!-- Compare Datasets Modal -->
-        <div id="compareModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
-            <div class="card p-6 w-96 mx-4">
-                <h3 class="text-lg font-semibold mb-4">데이터셋 비교</h3>
+        <div id="compareModal" class="fixed inset-0 bg-black bg-opacity-70 hidden z-50 flex items-center justify-center">
+            <div class="card p-6 w-96 mx-4 bg-white border-4 border-indigo-300 shadow-2xl">
+                <h3 class="text-lg font-semibold mb-4 text-indigo-700">데이터셋 비교</h3>
                 <div class="space-y-2 mb-4">
                     {% for dataset in saved_datasets %}
                     <label class="flex items-center space-x-2">
@@ -324,18 +324,18 @@
                     {% endfor %}
                 </div>
                 <div class="flex gap-2">
-                    <button onclick="compareDatasets()" class="btn btn-primary btn-default flex-1">비교</button>
-                    <button onclick="closeModal('compareModal')" class="btn btn-outline btn-default">취소</button>
+                    <button onclick="compareDatasets()" class="btn btn-primary btn-default flex-1 bg-indigo-500 hover:bg-indigo-600 text-white">비교</button>
+                    <button onclick="closeModal('compareModal')" class="btn btn-outline btn-default bg-gray-500 hover:bg-gray-600 text-white">취소</button>
                 </div>
             </div>
         </div>
 
         <!-- Help Modal -->
-        <div id="helpModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
-            <div class="card p-6 w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
+        <div id="helpModal" class="fixed inset-0 bg-black bg-opacity-80 hidden z-50 flex items-center justify-center">
+            <div class="card p-6 w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto bg-white border-4 border-green-300 shadow-2xl">
                 <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-2xl font-bold">사용 가이드</h3>
-                    <button onclick="closeModal('helpModal')" class="btn btn-outline btn-sm">
+                    <h3 class="text-2xl font-bold text-green-700">사용 가이드</h3>
+                    <button onclick="closeModal('helpModal')" class="btn btn-outline btn-sm bg-red-500 hover:bg-red-600 text-white">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                         </svg>
