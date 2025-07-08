@@ -490,7 +490,7 @@ def upload_file():
                 table_data = {'No.': list(range(1, len(df) + 1))}
                 
                 # 기본 컬럼들 찾기
-                size_cols = [col for col in df.columns if 'size' in col.lower() or 'nm' in col.lower()]
+                size_cols = [col for col in df.columns if 'size' in col.lower() or 'µm' in col.lower()]
                 pi_cols = [col for col in df.columns if 'pi' in col.lower()]
                 
                 if size_cols:
