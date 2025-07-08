@@ -147,8 +147,18 @@
     <div class="container mx-auto py-6 px-4 max-w-7xl">
         <!-- Header -->
         <div class="card p-6 mb-6">
-            <h1 class="text-3xl font-bold text-center mb-2">Outlier Data Management System</h1>
-            <p class="text-muted-foreground text-center">실험 및 생산 데이터의 이상치 자동 검출·제거, 통계, 시각화 및 비교 분석</p>
+            <div class="flex justify-between items-start mb-4">
+                <div class="flex-1">
+                    <h1 class="text-3xl font-bold mb-2">Outlier Data Management System</h1>
+                    <p class="text-muted-foreground">실험 및 생산 데이터의 이상치 자동 검출·제거, 통계, 시각화 및 비교 분석</p>
+                </div>
+                <button onclick="showHelpModal()" class="btn btn-outline btn-sm flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    도움말
+                </button>
+            </div>
         </div>
 
         <!-- Data Input Section -->
@@ -316,6 +326,171 @@
                 <div class="flex gap-2">
                     <button onclick="compareDatasets()" class="btn btn-primary btn-default flex-1">비교</button>
                     <button onclick="closeModal('compareModal')" class="btn btn-outline btn-default">취소</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Help Modal -->
+        <div id="helpModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+            <div class="card p-6 w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-2xl font-bold">사용 가이드</h3>
+                    <button onclick="closeModal('helpModal')" class="btn btn-outline btn-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                
+                <div class="space-y-8">
+                    <!-- 시작하기 -->
+                    <div class="border-l-4 border-primary pl-4">
+                        <h4 class="text-lg font-semibold mb-3 text-primary">🚀 시작하기</h4>
+                        <div class="space-y-3 text-sm">
+                            <div class="bg-secondary p-3 rounded">
+                                <strong>1단계:</strong> 샘플명, 생산일자, 패스 수를 입력하세요
+                            </div>
+                            <div class="bg-secondary p-3 rounded">
+                                <strong>2단계:</strong> 데이터를 직접 입력하거나 Excel/CSV 파일을 업로드하세요
+                            </div>
+                            <div class="bg-secondary p-3 rounded">
+                                <strong>3단계:</strong> 임계값을 조정하고 "이상치 검출 및 계산" 버튼을 클릭하세요
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 데이터 입력 -->
+                    <div class="border-l-4 border-green-500 pl-4">
+                        <h4 class="text-lg font-semibold mb-3 text-green-600">📊 데이터 입력 방법</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                            <div>
+                                <h5 class="font-medium mb-2">✏️ 직접 입력</h5>
+                                <ul class="list-disc list-inside space-y-1 text-muted-foreground">
+                                    <li>표의 셀에 직접 숫자를 입력</li>
+                                    <li>"행 추가" 버튼으로 데이터 추가</li>
+                                    <li>"컬럼 추가" 버튼으로 새로운 측정 항목 추가</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <h5 class="font-medium mb-2">📁 파일 업로드</h5>
+                                <ul class="list-disc list-inside space-y-1 text-muted-foreground">
+                                    <li>Excel (.xlsx, .xls) 또는 CSV 파일 지원</li>
+                                    <li>size, nm, PI 컬럼 자동 매핑</li>
+                                    <li>기타 숫자 컬럼도 자동 인식</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 이상치 검출 -->
+                    <div class="border-l-4 border-blue-500 pl-4">
+                        <h4 class="text-lg font-semibold mb-3 text-blue-600">🎯 이상치 검출 방법</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                            <div class="bg-blue-50 p-3 rounded">
+                                <h5 class="font-medium mb-2">Z-Score</h5>
+                                <p class="text-muted-foreground mb-2">평균에서 표준편차의 몇 배 떨어져 있는지 측정</p>
+                                <p class="text-xs"><strong>권장값:</strong> 2.0~3.0</p>
+                                <p class="text-xs"><strong>높을수록:</strong> 더 관대한 기준</p>
+                            </div>
+                            <div class="bg-green-50 p-3 rounded">
+                                <h5 class="font-medium mb-2">IQR</h5>
+                                <p class="text-muted-foreground mb-2">사분위수 범위를 벗어나는 데이터 검출</p>
+                                <p class="text-xs"><strong>권장값:</strong> 1.5~2.0</p>
+                                <p class="text-xs"><strong>높을수록:</strong> 더 관대한 기준</p>
+                            </div>
+                            <div class="bg-purple-50 p-3 rounded">
+                                <h5 class="font-medium mb-2">MAD</h5>
+                                <p class="text-muted-foreground mb-2">중앙값 절대편차 기반 검출</p>
+                                <p class="text-xs"><strong>권장값:</strong> 3.0~4.0</p>
+                                <p class="text-xs"><strong>높을수록:</strong> 더 관대한 기준</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 데이터 관리 -->
+                    <div class="border-l-4 border-orange-500 pl-4">
+                        <h4 class="text-lg font-semibold mb-3 text-orange-600">💾 데이터 관리</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                            <div>
+                                <h5 class="font-medium mb-2">📂 저장 및 불러오기</h5>
+                                <ul class="list-disc list-inside space-y-1 text-muted-foreground">
+                                    <li>"데이터셋 저장"으로 현재 작업 저장</li>
+                                    <li>"데이터셋 불러오기"로 이전 작업 복원</li>
+                                    <li>여러 실험 데이터를 개별 관리</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <h5 class="font-medium mb-2">📈 비교 분석</h5>
+                                <ul class="list-disc list-inside space-y-1 text-muted-foreground">
+                                    <li>"데이터셋 비교"로 여러 실험 비교</li>
+                                    <li>시각적 그래프로 차이점 확인</li>
+                                    <li>통계 요약 테이블 제공</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 결과 활용 -->
+                    <div class="border-l-4 border-purple-500 pl-4">
+                        <h4 class="text-lg font-semibold mb-3 text-purple-600">📋 결과 활용</h4>
+                        <div class="space-y-3 text-sm">
+                            <div class="bg-purple-50 p-3 rounded">
+                                <h5 class="font-medium mb-2">📊 시각화</h5>
+                                <p class="text-muted-foreground">인터랙티브 산점도로 데이터 분포 확인, 마우스 오버로 세부 정보 표시</p>
+                            </div>
+                            <div class="bg-purple-50 p-3 rounded">
+                                <h5 class="font-medium mb-2">📁 결과 다운로드</h5>
+                                <p class="text-muted-foreground">"결과 다운로드" 버튼으로 CSV 파일 저장, 원본 데이터와 처리 결과 모두 포함</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 팁과 주의사항 -->
+                    <div class="border-l-4 border-red-500 pl-4">
+                        <h4 class="text-lg font-semibold mb-3 text-red-600">💡 팁과 주의사항</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                            <div>
+                                <h5 class="font-medium mb-2 text-green-600">✅ 좋은 사용법</h5>
+                                <ul class="list-disc list-inside space-y-1 text-muted-foreground">
+                                    <li>데이터 입력 전 샘플명과 날짜 먼저 설정</li>
+                                    <li>임계값을 여러 번 조정해보며 최적값 찾기</li>
+                                    <li>중요한 데이터는 반드시 저장하기</li>
+                                    <li>다양한 방법으로 이상치 검출 비교</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <h5 class="font-medium mb-2 text-red-600">⚠️ 주의사항</h5>
+                                <ul class="list-disc list-inside space-y-1 text-muted-foreground">
+                                    <li>빈 셀이나 문자는 자동으로 제외됨</li>
+                                    <li>최소 2개 이상의 유효한 데이터 필요</li>
+                                    <li>새로고침 시 저장되지 않은 데이터 손실</li>
+                                    <li>파일 업로드는 16MB 이하만 가능</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 예제 워크플로우 -->
+                    <div class="border-l-4 border-indigo-500 pl-4">
+                        <h4 class="text-lg font-semibold mb-3 text-indigo-600">🔄 예제 워크플로우</h4>
+                        <div class="bg-indigo-50 p-4 rounded">
+                            <ol class="list-decimal list-inside space-y-2 text-sm">
+                                <li><strong>실험 정보 입력:</strong> "Sample_A", "2024-01-15", 패스 1</li>
+                                <li><strong>데이터 입력:</strong> 직접 입력 또는 Excel 파일 업로드</li>
+                                <li><strong>임계값 조정:</strong> Z-Score 3.0, IQR 1.5, MAD 3.5</li>
+                                <li><strong>계산 실행:</strong> "이상치 검출 및 계산" 클릭</li>
+                                <li><strong>결과 확인:</strong> 시각화와 통계 테이블 검토</li>
+                                <li><strong>데이터 저장:</strong> "Sample_A_Pass1"로 저장</li>
+                                <li><strong>결과 다운로드:</strong> CSV 파일로 보고서 작성용 다운로드</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-8 pt-4 border-t text-center">
+                    <p class="text-sm text-muted-foreground">
+                        추가 문의사항이 있으시면 시스템 관리자에게 연락하세요.
+                    </p>
                 </div>
             </div>
         </div>
@@ -767,6 +942,10 @@
         
         function downloadCSV() {
             window.location.href = '/download_csv';
+        }
+        
+        function showHelpModal() {
+            document.getElementById('helpModal').classList.remove('hidden');
         }
         
         function closeModal(modalId) {
