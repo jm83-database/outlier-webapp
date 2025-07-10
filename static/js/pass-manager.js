@@ -6,10 +6,150 @@
 class PassManager {
     constructor() {
         this.passAverages = [];
+        // 페이지 로드 시 초기 설정
+        this.initializeCustomFieldLabels();
+    }
+    
+    // 페이지 로드 시 사용자 정의 필드 라벨 초기화
+    initializeCustomFieldLabels() {
+        // DOM이 준비될 때까지 대기
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                setTimeout(() => this.setInitialCustomFieldLabels(), 100);
+            });
+        } else {
+            setTimeout(() => this.setInitialCustomFieldLabels(), 100);
+        }
+    }
+    
+    setInitialCustomFieldLabels() {
+        const customFieldNameInput = document.getElementById('custom_field_name');
+        if (customFieldNameInput && customFieldNameInput.value) {
+            this.updateCustomFieldLabels(customFieldNameInput.value);
+        }
     }
 
-    // 패스별 평균값 추가
+    // 두 그룹 동시 평균값 추가
+    async addBothGroupsAverage() {
+        const passNumber = document.getElementById('pass_number_input')?.value;
+        const customFieldName = document.getElementById('custom_field_name')?.value;
+        
+        // 실험군 데이터
+        const expSizeAvg = document.getElementById('exp_size_avg_input')?.value;
+        const expPiAvg = document.getElementById('exp_pi_avg_input')?.value;
+        const expCustomData = document.getElementById('exp_custom_data_input')?.value;
+        
+        // 대조군 데이터
+        const ctrlSizeAvg = document.getElementById('ctrl_size_avg_input')?.value;
+        const ctrlPiAvg = document.getElementById('ctrl_pi_avg_input')?.value;
+        const ctrlCustomData = document.getElementById('ctrl_custom_data_input')?.value;
+        
+        if (!passNumber) {
+            utils.showNotification('패스 번호는 필수 입력 항목입니다.', 'error');
+            return;
+        }
+        
+        // 최소 한 그룹의 완전한 데이터 확인
+        const expComplete = expSizeAvg && expPiAvg;
+        const ctrlComplete = ctrlSizeAvg && ctrlPiAvg;
+        
+        if (!expComplete && !ctrlComplete) {
+            utils.showNotification('최소 한 그룹의 Size와 PI 데이터는 필수입니다.', 'error');
+            return;
+        }
+        
+        const requestData = {
+            pass_number: parseInt(passNumber),
+            custom_data_name: customFieldName,
+            experimental: {},
+            control: {}
+        };
+        
+        // 실험군 데이터 추가
+        if (expComplete) {
+            requestData.experimental = {
+                size_avg: parseFloat(expSizeAvg),
+                pi_avg: parseFloat(expPiAvg)
+            };
+            if (expCustomData && expCustomData.trim() !== '') {
+                requestData.experimental.custom_data_value = parseFloat(expCustomData);
+            }
+        }
+        
+        // 대조군 데이터 추가
+        if (ctrlComplete) {
+            requestData.control = {
+                size_avg: parseFloat(ctrlSizeAvg),
+                pi_avg: parseFloat(ctrlPiAvg)
+            };
+            if (ctrlCustomData && ctrlCustomData.trim() !== '') {
+                requestData.control.custom_data_value = parseFloat(ctrlCustomData);
+            }
+        }
+        
+        try {
+            const result = await utils.apiRequest('/add_both_groups_pass_average', requestData, 'POST');
+            
+            if (result.status === 'success') {
+                utils.showNotification(result.message, 'success');
+                
+                // 입력 필드 초기화
+                document.getElementById('pass_number_input').value = '';
+                document.getElementById('exp_size_avg_input').value = '';
+                document.getElementById('exp_pi_avg_input').value = '';
+                document.getElementById('exp_custom_data_input').value = '';
+                document.getElementById('ctrl_size_avg_input').value = '';
+                document.getElementById('ctrl_pi_avg_input').value = '';
+                document.getElementById('ctrl_custom_data_input').value = '';
+                
+                this.renderPassAveragesTable(result.pass_averages);
+                
+                // 사용자 정의 필드명 업데이트
+                if (result.custom_data_field_name) {
+                    this.updateCustomFieldLabels(result.custom_data_field_name);
+                }
+            } else {
+                utils.showNotification(result.message, 'error');
+            }
+        } catch (error) {
+            utils.showNotification('패스 평균값 추가 중 오류가 발생했습니다.', 'error');
+        }
+    }
+
+    // 사용자 정의 필드 라벨 업데이트
+    updateCustomFieldLabels(fieldName) {
+        // 실험군/대조군 라벨 업데이트
+        const expLabel = document.getElementById('exp_custom_label');
+        const ctrlLabel = document.getElementById('ctrl_custom_label');
+        
+        if (expLabel) {
+            expLabel.textContent = fieldName;
+        }
+        if (ctrlLabel) {
+            ctrlLabel.textContent = fieldName;
+        }
+        
+        // 테이블 헤더 업데이트
+        const customFieldHeader = document.getElementById('custom_field_header');
+        if (customFieldHeader) {
+            customFieldHeader.textContent = fieldName;
+        }
+        
+        // 상관관계 분석 버튼 텍스트 업데이트
+        const correlationAnalysisBtn = document.getElementById('correlation_analysis_btn_text');
+        if (correlationAnalysisBtn) {
+            correlationAnalysisBtn.textContent = `${fieldName} 상관관계 분석`;
+        }
+    }
+
+    // 기존 단일 그룹 추가 함수 (호환성 유지)
     async addPassAverage() {
+        // 새로운 UI가 있는 경우 동시 추가 함수 사용
+        if (document.getElementById('exp_size_avg_input')) {
+            return this.addBothGroupsAverage();
+        }
+        
+        // 기존 코드 로직 유지 (만약 이전 UI가 남아있는 경우)
         const passNumber = document.getElementById('pass_number_input')?.value;
         const groupType = document.getElementById('group_type_select')?.value || 'experimental';
         const sizeAvg = document.getElementById('size_avg_input')?.value;
@@ -32,7 +172,6 @@ class PassManager {
             custom_data_name: customFieldName
         };
         
-        // 사용자 정의 데이터가 입력된 경우에만 포함
         if (customData && customData.trim() !== '') {
             requestData.custom_data_value = parseFloat(customData);
         }
@@ -43,7 +182,6 @@ class PassManager {
             if (result.status === 'success') {
                 utils.showNotification(result.message, 'success');
                 
-                // 입력 필드 초기화
                 document.getElementById('pass_number_input').value = '';
                 document.getElementById('size_avg_input').value = '';
                 document.getElementById('pi_avg_input').value = '';
@@ -306,6 +444,7 @@ window.passManager = new PassManager();
 
 // 전역 함수들 (기존 호환성 위해 유지)
 window.addPassAverage = () => passManager.addPassAverage();
+window.addBothGroupsAverage = () => passManager.addBothGroupsAverage();
 window.addFromCurrentResult = () => passManager.addFromCurrentResult();
 window.clearAllPasses = () => passManager.clearAllPasses();
 window.showTrendAnalysis = () => passManager.showTrendAnalysis();

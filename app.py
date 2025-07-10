@@ -616,6 +616,97 @@ def add_pass_average():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)})
 
+@app.route('/add_both_groups_pass_average', methods=['POST'])
+def add_both_groups_pass_average():
+    """실험군과 대조군 데이터를 동시에 추가"""
+    try:
+        data = request.get_json()
+        pass_number = data.get('pass_number')
+        custom_data_name = data.get('custom_data_name', '사용자 입력 필드(레퍼런스)')
+        
+        # 실험군 데이터
+        exp_data = data.get('experimental', {})
+        exp_size_avg = exp_data.get('size_avg')
+        exp_pi_avg = exp_data.get('pi_avg')
+        exp_custom_value = exp_data.get('custom_data_value')
+        
+        # 대조군 데이터
+        ctrl_data = data.get('control', {})
+        ctrl_size_avg = ctrl_data.get('size_avg')
+        ctrl_pi_avg = ctrl_data.get('pi_avg')
+        ctrl_custom_value = ctrl_data.get('custom_data_value')
+        
+        if not pass_number:
+            return jsonify({'status': 'error', 'message': '패스 번호는 필수입니다.'})
+        
+        # 최소 하나의 그룹은 완전한 데이터를 가져야 함
+        exp_complete = exp_size_avg is not None and exp_pi_avg is not None
+        ctrl_complete = ctrl_size_avg is not None and ctrl_pi_avg is not None
+        
+        if not (exp_complete or ctrl_complete):
+            return jsonify({'status': 'error', 'message': '최소 한 그룹의 Size와 PI 데이터는 필수입니다.'})
+        
+        current_dataset = session.get('current_dataset', {})
+        if 'pass_averages' not in current_dataset:
+            current_dataset['pass_averages'] = []
+        
+        # 사용자 정의 필드명 저장
+        current_dataset['custom_data_field_name'] = custom_data_name
+        
+        # 기존 데이터 중복 체크
+        existing_passes = [(p['pass_number'], p.get('group_type', 'experimental')) for p in current_dataset['pass_averages']]
+        
+        added_groups = []
+        
+        # 실험군 데이터 추가
+        if exp_complete:
+            if (int(pass_number), 'experimental') in existing_passes:
+                return jsonify({'status': 'error', 'message': f'패스 {pass_number} 실험군이 이미 존재합니다.'})
+            
+            exp_pass = {
+                'pass_number': int(pass_number),
+                'group_type': 'experimental',
+                'size_avg': float(exp_size_avg),
+                'pi_avg': float(exp_pi_avg),
+                'removal_method': 'Manual',
+                'threshold_used': 'N/A',
+                'custom_data_value': float(exp_custom_value) if exp_custom_value is not None and exp_custom_value != '' else None,
+                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            }
+            current_dataset['pass_averages'].append(exp_pass)
+            added_groups.append('실험군')
+        
+        # 대조군 데이터 추가
+        if ctrl_complete:
+            if (int(pass_number), 'control') in existing_passes:
+                return jsonify({'status': 'error', 'message': f'패스 {pass_number} 대조군이 이미 존재합니다.'})
+            
+            ctrl_pass = {
+                'pass_number': int(pass_number),
+                'group_type': 'control',
+                'size_avg': float(ctrl_size_avg),
+                'pi_avg': float(ctrl_pi_avg),
+                'removal_method': 'Manual',
+                'threshold_used': 'N/A',
+                'custom_data_value': float(ctrl_custom_value) if ctrl_custom_value is not None and ctrl_custom_value != '' else None,
+                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            }
+            current_dataset['pass_averages'].append(ctrl_pass)
+            added_groups.append('대조군')
+        
+        session['current_dataset'] = current_dataset
+        
+        groups_text = ', '.join(added_groups)
+        return jsonify({
+            'status': 'success',
+            'message': f'패스 {pass_number} {groups_text} 데이터가 추가되었습니다.',
+            'pass_averages': current_dataset['pass_averages'],
+            'custom_data_field_name': current_dataset.get('custom_data_field_name', '점도')
+        })
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
 @app.route('/delete_pass_average', methods=['POST'])
 def delete_pass_average():
     try:

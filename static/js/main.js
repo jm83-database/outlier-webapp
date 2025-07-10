@@ -90,6 +90,23 @@ function setupEventListeners() {
         });
     }
     
+    // 두 그룹 동시 추가 버튼
+    const addBothGroupsBtn = document.getElementById('addBothGroupsBtn');
+    if (addBothGroupsBtn) {
+        addBothGroupsBtn.addEventListener('click', function() {
+            if (window.passManager && window.passManager.addBothGroupsAverage) {
+                window.passManager.addBothGroupsAverage();
+            } else {
+                console.error('PassManager가 아직 초기화되지 않았습니다.');
+                setTimeout(() => {
+                    if (window.passManager && window.passManager.addBothGroupsAverage) {
+                        window.passManager.addBothGroupsAverage();
+                    }
+                }, 100);
+            }
+        });
+    }
+    
     // 키보드 단축키
     document.addEventListener('keydown', function(e) {
         // Ctrl + Enter로 계산 실행
@@ -421,15 +438,10 @@ function displayCustomDataCorrelation(data) {
 // 사용자 정의 필드명 업데이트
 function updateCustomFieldName() {
     const customFieldNameInput = document.getElementById('custom_field_name');
-    const customFieldHeader = document.getElementById('custom_field_header');
-    const correlationAnalysisBtn = document.getElementById('correlation_analysis_btn_text');
     
-    if (customFieldNameInput && customFieldHeader) {
-        customFieldHeader.textContent = customFieldNameInput.value;
-    }
-    
-    if (customFieldNameInput && correlationAnalysisBtn) {
-        correlationAnalysisBtn.textContent = `${customFieldNameInput.value} 상관관계 분석`;
+    if (customFieldNameInput && window.passManager) {
+        // PassManager에서 모든 라벨 업데이트를 처리
+        window.passManager.updateCustomFieldLabels(customFieldNameInput.value);
     }
 }
 
@@ -438,12 +450,62 @@ function showHelpModal() {
     utils.showModal('helpModal');
 }
 
+// 페이지 새로고침 함수
+function refreshPage() {
+    // 로딩 표시
+    const refreshBtn = event.target.closest('button');
+    const originalHTML = refreshBtn.innerHTML;
+    
+    refreshBtn.innerHTML = `
+        <svg class="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+        새로고침 중...
+    `;
+    refreshBtn.disabled = true;
+    
+    // 강제 새로고침 (캐시 무시)
+    setTimeout(() => {
+        location.reload(true);
+    }, 500);
+}
+
 // 전역 함수 등록 (기존 호환성)
 window.saveDataset = saveDataset;
 window.loadDataset = loadDataset;
 window.showHelpModal = showHelpModal;
+window.refreshPage = refreshPage;
 window.showCustomDataCorrelation = showCustomDataCorrelation;
 window.updateCustomFieldName = updateCustomFieldName;
+
+// PassManager 함수들도 전역으로 등록
+window.addBothGroupsAverage = function() {
+    if (window.passManager) {
+        return window.passManager.addBothGroupsAverage();
+    } else {
+        console.error('PassManager가 아직 초기화되지 않았습니다.');
+    }
+};
+window.addPassAverage = function() {
+    if (window.passManager) {
+        return window.passManager.addPassAverage();
+    }
+};
+window.addFromCurrentResult = function() {
+    if (window.passManager) {
+        return window.passManager.addFromCurrentResult();
+    }
+};
+window.clearAllPasses = function() {
+    if (window.passManager) {
+        return window.passManager.clearAllPasses();
+    }
+};
+window.showTrendAnalysis = function() {
+    if (window.passManager) {
+        return window.passManager.showTrendAnalysis();
+    }
+};
 
 // 개발 모드에서 디버깅 정보
 if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {

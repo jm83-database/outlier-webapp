@@ -10,12 +10,20 @@
                 <h1 class="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-8">Outlier Data Management System</h1>
                 <p class="text-gray-600 text-lg">실험 및 생산 데이터의 이상치 자동 검출·제거, 통계, 시각화 및 비교 분석</p>
             </div>
-            <button onclick="showHelpModal()" class="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-3">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-                도움말
-            </button>
+            <div class="flex gap-3">
+                <button onclick="refreshPage()" class="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-3" title="페이지에 문제가 있을 때 클릭하세요">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                    새로고침
+                </button>
+                <button onclick="showHelpModal()" class="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-3">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    도움말
+                </button>
+            </div>
         </div>
     </div>
 
@@ -246,55 +254,98 @@
         </h2>
         
         <!-- Pass Average Input Form -->
-        <div class="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6 p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200 items-end">
-            <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2 text-center">패스 번호</label>
-                <input type="number" id="pass_number_input" min="1" 
-                       placeholder="패스 번호" 
-                       class="enhanced-input w-full px-3 py-2 bg-white border-2 border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 text-center">
-            </div>
-            <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2 text-center">그룹 구분</label>
-                <select id="group_type_select" class="enhanced-input w-full px-3 py-2 bg-white border-2 border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200">
-                    <option value="experimental">실험군</option>
-                    <option value="control">대조군</option>
-                </select>
-            </div>
-            <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2 text-center">Size(nm) 평균</label>
-                <input type="number" id="size_avg_input" step="0.001" 
-                       placeholder="Size 평균값" 
-                       class="enhanced-input w-full px-3 py-2 bg-white border-2 border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 text-center">
-            </div>
-            <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2 text-center">PI 평균</label>
-                <input type="number" id="pi_avg_input" step="0.001" 
-                       placeholder="PI 평균값" 
-                       class="enhanced-input w-full px-3 py-2 bg-white border-2 border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 text-center">
-            </div>
-            <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2 text-center">
-                    <div class="relative">
-                        <input type="text" id="custom_field_name" value="{{ custom_data_field_name }}" 
-                               class="custom-field-highlight w-full px-3 py-1 text-center border-2 border-dashed border-orange-400 bg-gradient-to-r from-orange-50 to-yellow-50 rounded-lg font-bold text-xs text-orange-700 hover:border-orange-500 focus:border-orange-600 focus:ring-2 focus:ring-orange-300 transition-all duration-200 cursor-pointer" 
-                               onchange="updateCustomFieldName()"
-                               title="클릭하여 필드명을 변경하세요">
-                        <div class="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full animate-pulse"></div>
+        <div class="mb-6 p-6 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200">
+            <!-- 공통 설정 -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 items-stretch">
+                <div class="flex flex-col">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2 text-center">패스 번호</label>
+                    <input type="number" id="pass_number_input" min="1" 
+                           placeholder="패스 번호" 
+                           class="enhanced-input w-full px-3 py-3 bg-white border-2 border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 text-center flex-1">
+                </div>
+                <div class="flex flex-col">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2 text-center">사용자 정의 필드</label>
+                    <div class="flex-1 flex flex-col justify-center">
+                        <div class="relative">
+                            <input type="text" id="custom_field_name" value="{{ custom_data_field_name }}" 
+                                   class="custom-field-highlight w-full px-3 py-3 text-center border-2 border-dashed border-orange-400 bg-gradient-to-r from-orange-50 to-yellow-50 rounded-lg font-bold text-sm text-orange-700 hover:border-orange-500 focus:border-orange-600 focus:ring-2 focus:ring-orange-300 transition-all duration-200 cursor-pointer" 
+                                   onchange="updateCustomFieldName()" 
+                                   oninput="updateCustomFieldName()"
+                                   title="클릭하여 필드명을 변경하세요">
+                            <div class="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full animate-pulse"></div>
+                        </div>
+                        <div class="text-xs text-orange-600 text-center mt-1">👆 클릭하여 편집</div>
                     </div>
-                </label>
-                <input type="number" id="custom_data_input" step="0.001" 
-                       placeholder="레퍼런스값" 
-                       class="enhanced-input w-full px-3 py-2 bg-white border-2 border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 text-center">
+                </div>
+                <div class="flex flex-col">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2 text-center invisible">버튼</label>
+                    <button id="addBothGroupsBtn"
+                            class="btn-enhanced w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white px-4 py-3 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-2 flex-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                        </svg>
+                        두 그룹 동시 추가
+                    </button>
+                </div>
             </div>
-            <div class="flex flex-col">
-                <div class="text-sm text-orange-600 mb-3 opacity-90 font-medium text-center">👈 클릭하여 편집</div>
-                <button onclick="addPassAverage()" 
-                        class="btn-enhanced w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white px-4 py-2.5 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-                    </svg>
-                    추가
-                </button>
+            
+            <!-- 실험군/대조군 데이터 입력 -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- 실험군 -->
+                <div class="bg-blue-50 p-4 rounded-xl border border-blue-200">
+                    <h4 class="text-lg font-semibold text-blue-800 mb-4 text-center flex items-center justify-center gap-2">
+                        <div class="w-3 h-3 bg-blue-600 rounded-full"></div>
+                        실험군 (Experimental)
+                    </h4>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-sm font-medium text-blue-700 mb-1 text-center">Size(nm) 평균</label>
+                            <input type="number" id="exp_size_avg_input" step="0.001" 
+                                   placeholder="Size 평균값" 
+                                   class="enhanced-input w-full px-3 py-2 bg-white border-2 border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-center">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-blue-700 mb-1 text-center">PI 평균</label>
+                            <input type="number" id="exp_pi_avg_input" step="0.001" 
+                                   placeholder="PI 평균값" 
+                                   class="enhanced-input w-full px-3 py-2 bg-white border-2 border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-center">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-blue-700 mb-1 text-center" id="exp_custom_label">레퍼런스값</label>
+                            <input type="number" id="exp_custom_data_input" step="0.001" 
+                                   placeholder="레퍼런스값" 
+                                   class="enhanced-input w-full px-3 py-2 bg-white border-2 border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-center">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 대조군 -->
+                <div class="bg-green-50 p-4 rounded-xl border border-green-200">
+                    <h4 class="text-lg font-semibold text-green-800 mb-4 text-center flex items-center justify-center gap-2">
+                        <div class="w-3 h-3 bg-green-600 rounded-full"></div>
+                        대조군 (Control)
+                    </h4>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-sm font-medium text-green-700 mb-1 text-center">Size(nm) 평균</label>
+                            <input type="number" id="ctrl_size_avg_input" step="0.001" 
+                                   placeholder="Size 평균값" 
+                                   class="enhanced-input w-full px-3 py-2 bg-white border-2 border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-center">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-green-700 mb-1 text-center">PI 평균</label>
+                            <input type="number" id="ctrl_pi_avg_input" step="0.001" 
+                                   placeholder="PI 평균값" 
+                                   class="enhanced-input w-full px-3 py-2 bg-white border-2 border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-center">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-green-700 mb-1 text-center" id="ctrl_custom_label">레퍼런스값</label>
+                            <input type="number" id="ctrl_custom_data_input" step="0.001" 
+                                   placeholder="레퍼런스값" 
+                                   class="enhanced-input w-full px-3 py-2 bg-white border-2 border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 text-center">
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
