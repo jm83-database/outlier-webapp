@@ -134,7 +134,8 @@ def index():
                          sample_name=session['current_dataset'].get('sample_name', ''),
                          production_date=session['current_dataset'].get('production_date', ''),
                          pass_count=session['current_dataset'].get('pass_count', 1),
-                         saved_datasets=list(session['datasets'].keys()))
+                         saved_datasets=list(session['datasets'].keys()),
+                         custom_data_field_name=session['current_dataset'].get('custom_data_field_name', '사용자 입력 필드(레퍼런스)'))
 
 @app.route('/health')
 def health():
@@ -538,7 +539,8 @@ def add_pass_average():
         pi_avg = data.get('pi_avg')
         removal_method = data.get('removal_method', '')
         threshold_used = data.get('threshold_used', '')
-        viscosity = data.get('viscosity')  # 점도 값 추가
+        custom_data_name = data.get('custom_data_name', '사용자 입력 필드(레퍼런스)')  # 사용자 정의 필드명
+        custom_data_value = data.get('custom_data_value')  # 사용자 정의 데이터 값
         
         if not all([pass_number, size_avg is not None, pi_avg is not None]):
             return jsonify({'status': 'error', 'message': '필수 데이터가 누락되었습니다.'})
@@ -546,6 +548,10 @@ def add_pass_average():
         current_dataset = session.get('current_dataset', {})
         if 'pass_averages' not in current_dataset:
             current_dataset['pass_averages'] = []
+        
+        # 사용자 정의 필드명 저장 (데이터셋 레벨에서 관리)
+        if 'custom_data_field_name' not in current_dataset:
+            current_dataset['custom_data_field_name'] = custom_data_name
         
         # 중복 패스 번호 체크
         existing_passes = [p['pass_number'] for p in current_dataset['pass_averages']]
@@ -559,7 +565,7 @@ def add_pass_average():
             'pi_avg': float(pi_avg),
             'removal_method': removal_method,
             'threshold_used': threshold_used,
-            'viscosity': float(viscosity) if viscosity is not None else None,  # 점도 값 저장
+            'custom_data_value': float(custom_data_value) if custom_data_value is not None else None,
             'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         }
         
@@ -569,7 +575,8 @@ def add_pass_average():
         return jsonify({
             'status': 'success',
             'message': f'패스 {pass_number} 평균값이 추가되었습니다.',
-            'pass_averages': current_dataset['pass_averages']
+            'pass_averages': current_dataset['pass_averages'],
+            'custom_data_field_name': current_dataset.get('custom_data_field_name', '점도')
         })
         
     except Exception as e:
@@ -755,77 +762,80 @@ def get_pass_trend_data():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)})
 
-@app.route('/get_viscosity_correlation_data', methods=['GET'])
-def get_viscosity_correlation_data():
-    """점도와 size(nm) 간의 상관관계 분석 - draw_plot.py 스타일"""
+@app.route('/get_custom_data_correlation', methods=['GET'])
+def get_custom_data_correlation():
+    """사용자 정의 데이터와 size(nm) 간의 상관관계 분석"""
     try:
         current_dataset = session.get('current_dataset', {})
         pass_averages = current_dataset.get('pass_averages', [])
         sample_name = current_dataset.get('sample_name', 'Sample')
         production_date = current_dataset.get('production_date', '')
+        custom_field_name = current_dataset.get('custom_data_field_name', '사용자 입력 필드(레퍼런스)')
         
-        # 점도 데이터가 있는 패스만 필터링
-        viscosity_data = []
+        # 사용자 정의 데이터가 있는 패스만 필터링
+        custom_data = []
         for pass_data in pass_averages:
-            if pass_data.get('viscosity') is not None:
-                viscosity_data.append({
+            if pass_data.get('custom_data_value') is not None:
+                custom_data.append({
                     'pass_number': pass_data['pass_number'],
                     'size_avg': pass_data['size_avg'],  # size(nm) 데이터
-                    'viscosity': pass_data['viscosity']
+                    'custom_value': pass_data['custom_data_value']
                 })
         
-        if len(viscosity_data) < 2:
-            return jsonify({'status': 'error', 'message': '점도 상관관계 분석을 위해서는 최소 2개의 점도 데이터가 필요합니다.'})
+        if len(custom_data) < 2:
+            return jsonify({'status': 'error', 'message': f'{custom_field_name} 상관관계 분석을 위해서는 최소 2개의 {custom_field_name} 데이터가 필요합니다.'})
         
-        # 기준값 데이터 (draw_plot.py 스타일)
-        reference_data = [
-            {'name': 'UHV', 'viscosity': 11780, 'size_avg': 220.2},
-            {'name': 'HV', 'viscosity': 8615, 'size_avg': 185.2},
-            {'name': 'LV', 'viscosity': 4948, 'size_avg': 157.8}
-        ]
-        
-        # 상관관계 차트 생성 (draw_plot.py 스타일)
+        # 상관관계 차트 생성
         fig = go.Figure()
         
-        # 기준값 플롯 (빨간색)
-        for ref in reference_data:
-            fig.add_trace(go.Scatter(
-                x=[ref['viscosity']],
-                y=[ref['size_avg']],
-                mode='markers+text',
-                text=[ref['name']],
-                textposition='top center',
-                marker=dict(size=15, color='red', symbol='circle', 
-                           line=dict(width=2, color='black')),
-                name=f"Reference - {ref['name']}" if ref == reference_data[0] else '',
-                showlegend=ref == reference_data[0],
-                legendgroup='reference'
-            ))
+        # 점도 데이터인 경우 기준값 추가
+        if custom_field_name in ['점도', 'viscosity']:
+            reference_data = [
+                {'name': 'UHV', 'value': 11780, 'size_avg': 220.2},
+                {'name': 'HV', 'value': 8615, 'size_avg': 185.2},
+                {'name': 'LV', 'value': 4948, 'size_avg': 157.8}
+            ]
+            
+            # 기준값 플롯 (빨간색)
+            for ref in reference_data:
+                fig.add_trace(go.Scatter(
+                    x=[ref['value']],
+                    y=[ref['size_avg']],
+                    mode='markers+text',
+                    text=[ref['name']],
+                    textposition='top center',
+                    marker=dict(size=15, color='red', symbol='circle', 
+                               line=dict(width=2, color='black')),
+                    name=f"Reference - {ref['name']}" if ref == reference_data[0] else '',
+                    showlegend=ref == reference_data[0],
+                    legendgroup='reference'
+                ))
         
-        # 생산 데이터 플롯 (파란색/녹색)
-        colors = ['blue', 'green']
-        color_idx = 0 if production_date == '2025-06-24' else 1
-        
-        viscosities = [d['viscosity'] for d in viscosity_data]
-        sizes = [d['size_avg'] for d in viscosity_data]
-        pass_numbers = [d['pass_number'] for d in viscosity_data]
+        # 생산 데이터 플롯
+        custom_values = [d['custom_value'] for d in custom_data]
+        sizes = [d['size_avg'] for d in custom_data]
+        pass_numbers = [d['pass_number'] for d in custom_data]
         
         fig.add_trace(go.Scatter(
-            x=viscosities,
+            x=custom_values,
             y=sizes,
             mode='markers+text',
             text=[str(p) for p in pass_numbers],
             textposition='top center',
-            marker=dict(size=10, color=colors[color_idx], symbol='circle',
+            marker=dict(size=10, color='blue', symbol='circle',
                        line=dict(width=2, color='black')),
             name=f'{production_date}',
             showlegend=True
         ))
         
         # 레이아웃 설정
+        x_axis_title = f'{custom_field_name}'
+        if custom_field_name in ['점도', 'viscosity']:
+            x_axis_title += ' (10 s⁻¹, cP)'
+        
         fig.update_layout(
-            title=f'Production Data vs Reference Values - Viscosity vs Size<br>{sample_name}',
-            xaxis_title='Viscosity (10 s⁻¹, cP)',
+            title=f'Production Data - {custom_field_name} vs Size<br>{sample_name}',
+            xaxis_title=x_axis_title,
             yaxis_title='Size (nm)',
             height=600,
             width=800,
@@ -839,20 +849,9 @@ def get_viscosity_correlation_data():
             )
         )
         
-        # 범례에 기준값 추가
-        fig.add_trace(go.Scatter(
-            x=[None], y=[None],
-            mode='markers',
-            marker=dict(size=15, color='red', symbol='circle',
-                       line=dict(width=2, color='black')),
-            name='Reference Values',
-            showlegend=True,
-            legendgroup='reference'
-        ))
-        
         # 상관계수 계산
-        if len(viscosities) >= 2:
-            correlation = np.corrcoef(viscosities, sizes)[0, 1]
+        if len(custom_values) >= 2:
+            correlation = np.corrcoef(custom_values, sizes)[0, 1]
             correlation = correlation if not np.isnan(correlation) else 0
         else:
             correlation = 0
@@ -860,21 +859,22 @@ def get_viscosity_correlation_data():
         # 통계 정보
         stats = {
             'correlation': float(correlation),
-            'data_count': len(viscosity_data),
-            'viscosity_mean': np.mean(viscosities),
-            'viscosity_std': np.std(viscosities),
+            'data_count': len(custom_data),
+            'custom_mean': np.mean(custom_values),
+            'custom_std': np.std(custom_values),
             'size_mean': np.mean(sizes),
             'size_std': np.std(sizes),
             'sample_name': sample_name,
-            'production_date': production_date
+            'production_date': production_date,
+            'custom_field_name': custom_field_name
         }
         
         return jsonify({
             'status': 'success',
-            'viscosity_correlation_chart': json.dumps(fig, cls=PlotlyJSONEncoder),
+            'custom_correlation_chart': json.dumps(fig, cls=PlotlyJSONEncoder),
             'statistics': stats,
-            'viscosity_data': viscosity_data,
-            'reference_data': reference_data
+            'custom_data': custom_data,
+            'custom_field_name': custom_field_name
         })
         
     except Exception as e:
