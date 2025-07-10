@@ -83,7 +83,7 @@ def create_scatter_plot(data, title="Scatter Plot", outlier_info=None):
     
     # 기본 데이터 포인트
     fig.add_trace(go.Scatter(
-        x=df['size(µm)'],
+        x=df['size(nm)'],
         y=df['PI'],
         mode='markers',
         marker=dict(
@@ -92,14 +92,14 @@ def create_scatter_plot(data, title="Scatter Plot", outlier_info=None):
             line=dict(width=1, color='rgba(55, 128, 191, 1)')
         ),
         name='Data Points',
-        text=[f"Point {i+1}<br>Size: {row['size(µm)']:.3f}<br>PI: {row['PI']:.3f}" 
+        text=[f"Point {i+1}<br>Size: {row['size(nm)']:.3f}<br>PI: {row['PI']:.3f}" 
               for i, row in df.iterrows()],
         hovertemplate='%{text}<extra></extra>'
     ))
     
     fig.update_layout(
         title=title,
-        xaxis_title='Size (µm)',
+        xaxis_title='Size (nm)',
         yaxis_title='PI',
         hovermode='closest',
         width=600,
@@ -122,7 +122,7 @@ def index():
             'pass_count': 1,
             'table_data': {
                 'No.': list(range(1, default_rows + 1)),
-                'size(µm)': [None] * default_rows,
+                'size(nm)': [None] * default_rows,
                 'PI': [None] * default_rows
             },
             'pass_averages': []  # 패스별 평균값 저장
@@ -150,7 +150,7 @@ def update_data():
         table_data = data.get('table_data', {})
         
         # 데이터 정리
-        for key in ['size(µm)', 'PI']:
+        for key in ['size(nm)', 'PI']:
             if key in table_data:
                 cleaned_values = []
                 for v in table_data[key]:
@@ -183,11 +183,11 @@ def update_data():
 @app.route('/add_row', methods=['POST'])
 def add_row():
     try:
-        table_data = session.get('current_dataset', {}).get('table_data', {'No.': [], 'size(µm)': [], 'PI': []})
+        table_data = session.get('current_dataset', {}).get('table_data', {'No.': [], 'size(nm)': [], 'PI': []})
         new_no = len(table_data['No.']) + 1
         
         table_data['No.'].append(new_no)
-        table_data['size(µm)'].append(None)
+        table_data['size(nm)'].append(None)
         table_data['PI'].append(None)
         
         session['current_dataset']['table_data'] = table_data
@@ -232,7 +232,7 @@ def reset_data():
             'pass_count': 1,
             'table_data': {
                 'No.': list(range(1, default_rows + 1)),
-                'size(µm)': [None] * default_rows,
+                'size(nm)': [None] * default_rows,
                 'PI': [None] * default_rows
             },
             'pass_averages': []  # 패스별 평균값 저장
@@ -269,7 +269,7 @@ def calculate_with_thresholds():
         # 유효한 데이터 추출
         valid_data = []
         for i in range(len(df)):
-            size_val = df.iloc[i]['size(µm)']
+            size_val = df.iloc[i]['size(nm)']
             pi_val = df.iloc[i]['PI']
             
             try:
@@ -280,7 +280,7 @@ def calculate_with_thresholds():
                             np.isinf(size_float) or np.isinf(pi_float)):
                         valid_data.append({
                             'No.': len(valid_data) + 1,
-                            'size(µm)': size_float,
+                            'size(nm)': size_float,
                             'PI': pi_float
                         })
             except (ValueError, TypeError):
@@ -290,7 +290,7 @@ def calculate_with_thresholds():
             return jsonify({'status': 'error', 'message': '유효한 데이터가 없습니다.'})
         
         valid_df = pd.DataFrame(valid_data)
-        arr = valid_df['size(µm)'].values
+        arr = valid_df['size(nm)'].values
         
         # 각 방법별 이상치 검출 (사용자 지정 임계값 적용)
         methods = ['zscore', 'iqr', 'mad']
@@ -306,8 +306,8 @@ def calculate_with_thresholds():
                 'threshold': threshold_used,
                 'data': cleaned.to_dict('records'),
                 'outliers': outliers_removed.to_dict('records'),
-                'size_mean': float(cleaned['size(µm)'].mean()) if len(cleaned) > 0 else 0,
-                'size_std': float(cleaned['size(µm)'].std()) if len(cleaned) > 0 else 0,
+                'size_mean': float(cleaned['size(nm)'].mean()) if len(cleaned) > 0 else 0,
+                'size_std': float(cleaned['size(nm)'].std()) if len(cleaned) > 0 else 0,
                 'pi_mean': float(cleaned['PI'].mean()) if len(cleaned) > 0 else 0,
                 'pi_std': float(cleaned['PI'].std()) if len(cleaned) > 0 else 0,
                 'count': len(cleaned),
@@ -407,7 +407,7 @@ def compare_datasets():
                 # 유효한 데이터만 추출
                 valid_data = []
                 for i in range(len(df)):
-                    size_val = df.iloc[i].get('size(µm)')
+                    size_val = df.iloc[i].get('size(nm)')
                     pi_val = df.iloc[i].get('PI')
                     
                     try:
@@ -416,7 +416,7 @@ def compare_datasets():
                             pi_float = float(pi_val)
                             if not (np.isnan(size_float) or np.isnan(pi_float)):
                                 valid_data.append({
-                                    'size(µm)': size_float,
+                                    'size(nm)': size_float,
                                     'PI': pi_float,
                                     'dataset': name
                                 })
@@ -431,9 +431,9 @@ def compare_datasets():
         # 비교 시각화 생성
         df_compare = pd.DataFrame(comparison_data)
         
-        fig = px.scatter(df_compare, x='size(µm)', y='PI', color='dataset',
+        fig = px.scatter(df_compare, x='size(nm)', y='PI', color='dataset',
                         title='Dataset Comparison',
-                        labels={'size(µm)': 'Size (µm)', 'PI': 'PI'})
+                        labels={'size(nm)': 'Size (nm)', 'PI': 'PI'})
         
         comparison_plot = json.dumps(fig, cls=PlotlyJSONEncoder)
         
@@ -442,7 +442,7 @@ def compare_datasets():
         for name in dataset_names:
             dataset_data = [d for d in comparison_data if d['dataset'] == name]
             if dataset_data:
-                sizes = [d['size(µm)'] for d in dataset_data]
+                sizes = [d['size(nm)'] for d in dataset_data]
                 pis = [d['PI'] for d in dataset_data]
                 
                 stats_summary[name] = {
@@ -490,13 +490,13 @@ def upload_file():
                 table_data = {'No.': list(range(1, len(df) + 1))}
                 
                 # 기본 컬럼들 찾기
-                size_cols = [col for col in df.columns if 'size' in col.lower() or 'µm' in col.lower()]
+                size_cols = [col for col in df.columns if 'size' in col.lower() or 'nm' in col.lower()]
                 pi_cols = [col for col in df.columns if 'pi' in col.lower()]
                 
                 if size_cols:
-                    table_data['size(µm)'] = df[size_cols[0]].fillna('').tolist()
+                    table_data['size(nm)'] = df[size_cols[0]].fillna('').tolist()
                 else:
-                    table_data['size(µm)'] = [None] * len(df)
+                    table_data['size(nm)'] = [None] * len(df)
                 
                 if pi_cols:
                     table_data['PI'] = df[pi_cols[0]].fillna('').tolist()
@@ -516,7 +516,7 @@ def upload_file():
                     'table_data': clean_table_data,
                     'message': f'파일이 성공적으로 업로드되었습니다. ({len(df)}행)',
                     'columns_mapped': {
-                        'size(µm)': size_cols[0] if size_cols else None,
+                        'size(nm)': size_cols[0] if size_cols else None,
                         'PI': pi_cols[0] if pi_cols else None
                     }
                 })
@@ -632,14 +632,14 @@ def get_pass_trend_data():
             x=pass_numbers,
             y=size_avgs,
             mode='lines+markers',
-            name='Size(μm) 평균',
+            name='Size(nm) 평균',
             line=dict(color='blue', width=3),
             marker=dict(size=8)
         ))
         fig_size.update_layout(
-            title='패스별 Size(μm) 평균값 트렌드',
+            title='패스별 Size(nm) 평균값 트렌드',
             xaxis_title='패스 번호',
-            yaxis_title='Size(μm) 평균',
+            yaxis_title='Size(nm) 평균',
             height=400
         )
         
@@ -671,8 +671,8 @@ def get_pass_trend_data():
             name='Size vs PI'
         ))
         fig_correlation.update_layout(
-            title='Size(μm) vs PI 상관관계 (패스별)',
-            xaxis_title='Size(μm) 평균',
+            title='Size(nm) vs PI 상관관계 (패스별)',
+            xaxis_title='Size(nm) 평균',
             yaxis_title='PI 평균',
             height=400
         )
@@ -757,7 +757,7 @@ def get_pass_trend_data():
 
 @app.route('/get_viscosity_correlation_data', methods=['GET'])
 def get_viscosity_correlation_data():
-    """점도와 size(μm) 간의 상관관계 분석 - draw_plot.py 스타일"""
+    """점도와 size(nm) 간의 상관관계 분석 - draw_plot.py 스타일"""
     try:
         current_dataset = session.get('current_dataset', {})
         pass_averages = current_dataset.get('pass_averages', [])
@@ -770,7 +770,7 @@ def get_viscosity_correlation_data():
             if pass_data.get('viscosity') is not None:
                 viscosity_data.append({
                     'pass_number': pass_data['pass_number'],
-                    'size_avg': pass_data['size_avg'],  # size(µm) 데이터
+                    'size_avg': pass_data['size_avg'],  # size(nm) 데이터
                     'viscosity': pass_data['viscosity']
                 })
         
@@ -826,7 +826,7 @@ def get_viscosity_correlation_data():
         fig.update_layout(
             title=f'Production Data vs Reference Values - Viscosity vs Size<br>{sample_name}',
             xaxis_title='Viscosity (10 s⁻¹, cP)',
-            yaxis_title='Size (μm)',
+            yaxis_title='Size (nm)',
             height=600,
             width=800,
             font=dict(size=12),
@@ -959,8 +959,8 @@ def get_viscosity_correlation():
             name='Size vs Viscosity'
         ))
         fig_size_visc.update_layout(
-            title='Size(μm) vs Viscosity 상관관계',
-            xaxis_title='Size(μm) 평균',
+            title='Size(nm) vs Viscosity 상관관계',
+            xaxis_title='Size(nm) 평균',
             yaxis_title='Viscosity (cP)',
             height=400
         )
@@ -1024,8 +1024,8 @@ def download_csv():
         csv_content.append(f"총 {results['original_count']}개 데이터")
         csv_content.append("")
         
-        # 컬럼 순서 지정: No., size(µm), PI, then others
-        ordered_columns = ['No.', 'size(µm)', 'PI']
+        # 컬럼 순서 지정: No., size(nm), PI, then others
+        ordered_columns = ['No.', 'size(nm)', 'PI']
         all_columns = list(original_df.columns)
         other_columns = [col for col in all_columns if col not in ordered_columns]
         column_order = [col for col in ordered_columns if col in all_columns] + other_columns
@@ -1044,15 +1044,15 @@ def download_csv():
             csv_content.append(f"=== {method_names[method]} 결과 (임계값: {method_result['threshold']}) ===")
             csv_content.append(f"처리된 데이터 개수,{method_result['count']}개")
             csv_content.append(f"제거된 이상치 개수,{method_result['outliers_count']}개")
-            csv_content.append(f"size(µm) 평균,{method_result['size_mean']:.3f}")
-            csv_content.append(f"size(µm) 표준편차,{method_result['size_std']:.3f}")
+            csv_content.append(f"size(nm) 평균,{method_result['size_mean']:.3f}")
+            csv_content.append(f"size(nm) 표준편차,{method_result['size_std']:.3f}")
             csv_content.append(f"PI 평균,{method_result['pi_mean']:.3f}")
             csv_content.append(f"PI 표준편차,{method_result['pi_std']:.3f}")
             csv_content.append("")
             
             cleaned_df = pd.DataFrame(method_result['data'])
             if len(cleaned_df) > 0:
-                # 컬럼 순서 지정: No., size(µm), PI, then others
+                # 컬럼 순서 지정: No., size(nm), PI, then others
                 cleaned_all_columns = list(cleaned_df.columns)
                 cleaned_other_columns = [col for col in cleaned_all_columns if col not in ordered_columns]
                 cleaned_column_order = [col for col in ordered_columns if col in cleaned_all_columns] + cleaned_other_columns

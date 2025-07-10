@@ -337,7 +337,7 @@
                            class="w-full px-3 py-2 bg-white border-2 border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 text-center">
                 </div>
                 <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2 text-center">Size(µm) 평균</label>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2 text-center">Size(nm) 평균</label>
                     <input type="number" id="size_avg_input" step="0.001" 
                            placeholder="Size 평균값" 
                            class="w-full px-3 py-2 bg-white border-2 border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 text-center">
@@ -382,7 +382,7 @@
                     <thead class="bg-gradient-to-r from-purple-50 to-pink-50">
                         <tr class="border-b-2 border-purple-200">
                             <th class="px-4 py-3 text-center font-semibold text-gray-700">패스 번호</th>
-                            <th class="px-4 py-3 text-center font-semibold text-gray-700">Size(µm) 평균</th>
+                            <th class="px-4 py-3 text-center font-semibold text-gray-700">Size(nm) 평균</th>
                             <th class="px-4 py-3 text-center font-semibold text-gray-700">PI 평균</th>
                             <th class="px-4 py-3 text-center font-semibold text-gray-700">점도 (cP)</th>
                             <th class="px-4 py-3 text-center font-semibold text-gray-700">이상치 제거법</th>
@@ -614,7 +614,7 @@
                                 <h5 class="font-medium mb-2">📁 파일 업로드</h5>
                                 <ul class="list-disc list-inside space-y-1 text-muted-foreground">
                                     <li>Excel (.xlsx, .xls) 또는 CSV 파일 지원</li>
-                                    <li>size, µm, PI 컬럼 자동 매핑</li>
+                                    <li>size,(nm, PI 컬럼 자동 매핑</li>
                                     <li>기타 숫자 컬럼도 자동 인식</li>
                                 </ul>
                             </div>
@@ -673,7 +673,7 @@
                             <div>
                                 <h5 class="font-medium mb-2 text-purple-700">📝 평균값 입력</h5>
                                 <ul class="list-disc list-inside space-y-1 text-muted-foreground">
-                                    <li><strong>수동 입력:</strong> 패스 번호, Size(µm) 평균, PI 평균 직접 입력</li>
+                                    <li><strong>수동 입력:</strong> 패스 번호, Size(nm) 평균, PI 평균 직접 입력</li>
                                     <li><strong>계산 결과 활용:</strong> 이상치 검출 결과에서 자동 추가</li>
                                     <li><strong>점도 데이터:</strong> 선택적으로 점도값 (cP) 함께 저장</li>
                                 </ul>
@@ -742,7 +742,7 @@
                                 <h5 class="font-medium mb-2 text-orange-700">📈 점도 상관관계 분석</h5>
                                 <ul class="list-disc list-inside space-y-1 text-muted-foreground">
                                     <li><strong>분석 조건:</strong> 점도 데이터 2개 이상 필요</li>
-                                    <li><strong>시각화:</strong> Size(μm) vs 점도 산점도 차트</li>
+                                    <li><strong>시각화:</strong> Size(nm) vs 점도 산점도 차트</li>
                                     <li><strong>기준값 비교:</strong> UHV, HV, LV 기준값과 생산 데이터 비교</li>
                                     <li><strong>상관계수:</strong> Size-점도 간 상관관계 수치 제공</li>
                                 </ul>
@@ -752,7 +752,7 @@
                         <div class="mt-4 bg-orange-100 border border-orange-200 p-3 rounded-xl">
                             <h5 class="font-medium mb-2 text-orange-800">💡 점도 데이터 활용 가이드</h5>
                             <ol class="list-decimal list-inside space-y-1 text-sm text-orange-700">
-                                <li><strong>1단계:</strong> 이상치 검출로 패스별 Size(µm) 평균값 계산</li>
+                                <li><strong>1단계:</strong> 이상치 검출로 패스별 Size(nm) 평균값 계산</li>
                                 <li><strong>2단계:</strong> 패스별 평균값 폼에서 Size/PI/점도값 입력</li>
                                 <li><strong>3단계:</strong> "점도 상관관계 분석" 버튼으로 시각화 확인</li>
                                 <li><strong>4단계:</strong> 기준값 대비 생산 데이터 위치 분석</li>
@@ -796,8 +796,8 @@
             header.innerHTML = '';
             tbody.innerHTML = '';
             
-            // Create header in specific order: No., size(µm), PI, then others
-            const orderedColumns = ['No.', 'size(µm)', 'PI'];
+            // Create header in specific order: No., size(nm), PI, then others
+            const orderedColumns = ['No.', 'size(nm)', 'PI'];
             const allColumns = Object.keys(tableData);
             const otherColumns = allColumns.filter(col => !orderedColumns.includes(col));
             const columns = [...orderedColumns.filter(col => allColumns.includes(col)), ...otherColumns];
@@ -986,7 +986,7 @@
                             <thead class="bg-gray-100">
                                 <tr>
                                     <th class="border px-3 py-2">No.</th>
-                                    <th class="border px-3 py-2">size(µm)</th>
+                                    <th class="border px-3 py-2">size(nm)</th>
                                     <th class="border px-3 py-2">PI</th>
                                 </tr>
                             </thead>
@@ -994,7 +994,7 @@
             `;
             
             data.original_data.forEach(row => {
-                html += `<tr><td class="border px-3 py-2 text-center">${row['No.']}</td><td class="border px-3 py-2 text-center">${row['size(µm)'].toFixed(3)}</td><td class="border px-3 py-2 text-center">${row['PI'].toFixed(3)}</td></tr>`;
+                html += `<tr><td class="border px-3 py-2 text-center">${row['No.']}</td><td class="border px-3 py-2 text-center">${row['size(nm)'].toFixed(3)}</td><td class="border px-3 py-2 text-center">${row['PI'].toFixed(3)}</td></tr>`;
             });
             
             html += `</tbody></table></div></div>`;
@@ -1026,7 +1026,7 @@
                         
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                             <div class="bg-blue-50 border border-blue-200 p-4 rounded">
-                                <h4 class="font-medium mb-2 text-blue-800">Size(µm) 통계</h4>
+                                <h4 class="font-medium mb-2 text-blue-800">Size(nm) 통계</h4>
                                 <div>평균: ${result.size_mean.toFixed(3)}</div>
                                 <div>표준편차: ${result.size_std.toFixed(3)}</div>
                             </div>
@@ -1045,7 +1045,7 @@
                                 <thead class="bg-gray-100">
                                     <tr>
                                     <th class="border px-2 py-1">No.</th>
-                                    <th class="border px-2 py-1">size(µm)</th>
+                                    <th class="border px-2 py-1">size(nm)</th>
                                     <th class="border px-2 py-1">PI</th>
                                     </tr>
                                 </thead>
@@ -1053,7 +1053,7 @@
                     `;
                     
                     result.data.forEach(row => {
-                        html += `<tr><td class="border px-2 py-1">${row['No.']}</td><td class="border px-2 py-1">${row['size(µm)'].toFixed(3)}</td><td class="border px-2 py-1">${row['PI'].toFixed(3)}</td></tr>`;
+                        html += `<tr><td class="border px-2 py-1">${row['No.']}</td><td class="border px-2 py-1">${row['size(nm)'].toFixed(3)}</td><td class="border px-2 py-1">${row['PI'].toFixed(3)}</td></tr>`;
                     });
                     
                     html += `</tbody></table></div>`;
@@ -1475,7 +1475,7 @@
                         </div>
                         <div class="bg-purple-50 border border-purple-200 p-4 rounded-xl text-center">
                             <div class="text-lg font-bold text-purple-600">${stats.size_mean.toFixed(1)}</div>
-                            <div class="text-sm text-gray-600">평균 Size (μm)</div>
+                            <div class="text-sm text-gray-600">평균 Size (nm)</div>
                             <div class="text-xs text-gray-500">±${stats.size_std.toFixed(1)}</div>
                         </div>
                     </div>
@@ -1491,7 +1491,7 @@
                 
                 <!-- 점도 상관관계 차트 -->
                 <div class="card p-6">
-                    <h3 class="text-lg font-semibold mb-4">Size(μm) vs 점도 상관관계 (draw_plot.py 스타일)</h3>
+                    <h3 class="text-lg font-semibold mb-4">Size(nm) vs 점도 상관관계 (draw_plot.py 스타일)</h3>
                     <div id="viscosity_correlation_chart" class="w-full" style="height: 600px;"></div>
                 </div>
             `;
@@ -1545,7 +1545,7 @@
                     <!-- 고급 통계 정보 -->
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                         <div class="bg-blue-50 border border-blue-200 p-4 rounded-xl">
-                            <h4 class="font-semibold text-blue-800 mb-3">Size(µm) 통계</h4>
+                            <h4 class="font-semibold text-blue-800 mb-3">Size(nm) 통계</h4>
                             <div class="space-y-2 text-sm">
                                 <div class="flex justify-between">
                                     <span>평균:</span>
@@ -1613,7 +1613,7 @@
                 
                 <!-- Size 트렌드 차트 -->
                 <div class="card p-6">
-                    <h3 class="text-lg font-semibold mb-4">Size(µm) 평균값 트렌드</h3>
+                    <h3 class="text-lg font-semibold mb-4">Size(nm) 평균값 트렌드</h3>
                     <div id="size_trend_chart" class="w-full h-96"></div>
                 </div>
                 
