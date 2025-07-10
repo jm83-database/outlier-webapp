@@ -1,0 +1,249 @@
+<!-- 도움말 모달 -->
+<div id="helpModal" class="fixed inset-0 bg-black bg-opacity-80 hidden z-50 flex items-center justify-center modal-backdrop">
+    <div class="card p-6 w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto 
+                bg-gradient-to-br from-white to-blue-50 rounded-2xl border-4 
+                border-blue-300 shadow-2xl backdrop-blur-sm modal-content custom-scrollbar">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">사용 가이드</h3>
+            <button onclick="utils.closeModal('helpModal')" class="btn btn-outline btn-sm bg-red-500 hover:bg-red-600 text-white rounded-full p-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        
+        <div class="space-y-8">
+            <div class="border-l-4 border-primary pl-4 bg-blue-50 p-4 rounded-lg shadow-sm">
+                <h4 class="text-lg font-semibold mb-3 text-primary">🚀 시작하기</h4>
+                <div class="space-y-3 text-sm">
+                    <div class="bg-blue-100 border border-blue-200 p-3 rounded-xl">
+                        <strong>1단계:</strong> 샘플명, 생산일자, 패스 수(회차, iteration)를 입력하세요
+                    </div>
+                    <div class="bg-blue-100 border border-blue-200 p-3 rounded-xl">
+                        <strong>2단계:</strong> 데이터를 직접 입력하거나 Excel/CSV 파일을 업로드하세요
+                    </div>
+                    <div class="bg-blue-100 border border-blue-200 p-3 rounded-xl">
+                        <strong>3단계:</strong> 임계값을 조정하고 "이상치 검출 및 계산" 버튼을 클릭하세요
+                    </div>
+                </div>
+            </div>
+
+            <div class="border-l-4 border-green-500 pl-4 bg-green-50 p-4 rounded-lg shadow-sm">
+                <h4 class="text-lg font-semibold mb-3 text-green-600">📊 데이터 입력 방법</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <h5 class="font-medium mb-2">✏️ 직접 입력</h5>
+                        <ul class="list-disc list-inside space-y-1 text-muted-foreground">
+                            <li>표의 셀에 직접 숫자를 입력</li>
+                            <li>"행 추가" 버튼으로 데이터 추가</li>
+                            <li>"컬럼 추가" 버튼으로 새로운 측정 항목 추가</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h5 class="font-medium mb-2">📁 파일 업로드</h5>
+                        <ul class="list-disc list-inside space-y-1 text-muted-foreground">
+                            <li>Excel (.xlsx, .xls) 또는 CSV 파일 지원</li>
+                            <li>size, nm, PI 컬럼 자동 매핑</li>
+                            <li>기타 숫자 컬럼도 자동 인식</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="border-l-4 border-blue-500 pl-4 bg-purple-50 p-4 rounded-lg shadow-sm">
+                <h4 class="text-lg font-semibold mb-3 text-blue-600">🎯 이상치 검출 방법</h4>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div class="bg-blue-100 border border-blue-200 p-3 rounded-xl">
+                        <h5 class="font-medium mb-2 text-blue-800">Z-Score</h5>
+                        <p class="text-gray-600 mb-2">평균에서 표준편차의 몇 배 떨어져 있는지 측정</p>
+                        <p class="text-xs text-blue-700"><strong>권장값:</strong> 2.0~3.0</p>
+                        <p class="text-xs text-blue-700"><strong>높을수록:</strong> 더 관대한 기준</p>
+                    </div>
+                    <div class="bg-green-100 border border-green-200 p-3 rounded-xl">
+                        <h5 class="font-medium mb-2 text-green-800">IQR</h5>
+                        <p class="text-gray-600 mb-2">사분위수 범위를 벗어나는 데이터 검출</p>
+                        <p class="text-xs text-green-700"><strong>권장값:</strong> 1.5~2.0</p>
+                        <p class="text-xs text-green-700"><strong>높을수록:</strong> 더 관대한 기준</p>
+                    </div>
+                    <div class="bg-purple-100 border border-purple-200 p-3 rounded-xl">
+                        <h5 class="font-medium mb-2 text-purple-800">MAD</h5>
+                        <p class="text-gray-600 mb-2">중앙값 절대편차 기반 검출</p>
+                        <p class="text-xs text-purple-700"><strong>권장값:</strong> 3.0~4.0</p>
+                        <p class="text-xs text-purple-700"><strong>높을수록:</strong> 더 관대한 기준</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="border-l-4 border-orange-500 pl-4 bg-yellow-50 p-4 rounded-lg shadow-sm">
+                <h4 class="text-lg font-semibold mb-3 text-orange-600">💾 데이터 관리</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <h5 class="font-medium mb-2">📂 저장 및 불러오기</h5>
+                        <ul class="list-disc list-inside space-y-1 text-muted-foreground">
+                            <li>"데이터셋 저장"으로 현재 작업 저장</li>
+                            <li>"데이터셋 불러오기"로 이전 작업 복원</li>
+                            <li>여러 실험 데이터를 개별 관리</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h5 class="font-medium mb-2">📈 비교 분석</h5>
+                        <ul class="list-disc list-inside space-y-1 text-muted-foreground">
+                            <li>"데이터셋 비교"로 여러 실험 비교</li>
+                            <li>시각적 그래프로 차이점 확인</li>
+                            <li>통계 요약 테이블 제공</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="border-l-4 border-purple-500 pl-4 bg-purple-50 p-4 rounded-lg shadow-sm">
+                <h4 class="text-lg font-semibold mb-3 text-purple-600">📈 패스별 데이터 관리</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <h5 class="font-medium mb-2 text-purple-700">📝 평균값 입력</h5>
+                        <ul class="list-disc list-inside space-y-1 text-muted-foreground">
+                            <li><strong>수동 입력:</strong> 패스 번호, Size(nm) 평균, PI 평균 직접 입력</li>
+                            <li><strong>계산 결과 활용:</strong> 이상치 검출 결과에서 자동 추가</li>
+                            <li><strong>사용자 정의 필드:</strong> 점도, 온도, 압력 등 원하는 데이터 함께 저장</li>
+                            <li><strong>필드명 변경:</strong> 입력 필드명을 직접 수정하여 데이터 종류 설정</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h5 class="font-medium mb-2 text-purple-700">📊 트렌드 분석</h5>
+                        <ul class="list-disc list-inside space-y-1 text-muted-foreground">
+                            <li><strong>패스별 트렌드:</strong> Size/PI 값의 패스별 변화 추이</li>
+                            <li><strong>상관관계 분석:</strong> Size-PI 간 상관계수 계산</li>
+                            <li><strong>통계 요약:</strong> 평균, 표준편차, 변동계수 제공</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="border-l-4 border-teal-500 pl-4 bg-teal-50 p-4 rounded-lg shadow-sm">
+                <h4 class="text-lg font-semibold mb-3 text-teal-600">🔬 실험군/대조군 구분 관리</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <h5 class="font-medium mb-2 text-teal-700">🔄 그룹 구분 기능</h5>
+                        <ul class="list-disc list-inside space-y-1 text-muted-foreground">
+                            <li><strong>실험군:</strong> 주요 실험 대상 데이터 (파란색 표시)</li>
+                            <li><strong>대조군:</strong> 비교 대상 데이터 (초록색 표시)</li>
+                            <li><strong>동일 구조:</strong> 실험군과 대조군 모두 Size(nm), PI, 사용자 정의 필드 포함</li>
+                            <li><strong>패스별 관리:</strong> 각 패스번호에 대해 실험군/대조군 별도 입력 가능</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h5 class="font-medium mb-2 text-teal-700">📊 구분 시각화</h5>
+                        <ul class="list-disc list-inside space-y-1 text-muted-foreground">
+                            <li><strong>색상 구분:</strong> 실험군(파란색), 대조군(초록색) 점으로 표시</li>
+                            <li><strong>통합 차트:</strong> 한 개의 plot에서 두 그룹 동시 표시</li>
+                            <li><strong>개별 통계:</strong> 실험군/대조군 데이터 개수 및 통계 별도 제공</li>
+                            <li><strong>비교 분석:</strong> Size(nm) vs 사용자 정의 필드 상관관계 그룹별 비교</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="mt-4 bg-teal-100 border border-teal-200 p-3 rounded-xl">
+                    <h5 class="font-medium mb-2 text-teal-800">💡 실험군/대조군 활용 가이드</h5>
+                    <ol class="list-decimal list-inside space-y-1 text-sm text-teal-700">
+                        <li><strong>그룹 선택:</strong> 패스별 평균값 입력 시 "그룹 구분" 드롭다운에서 실험군/대조군 선택</li>
+                        <li><strong>데이터 입력:</strong> 동일 패스번호로 실험군과 대조군 각각 입력 가능</li>
+                        <li><strong>테이블 확인:</strong> 패스별 데이터 테이블에서 그룹별 색상 뱃지로 구분 표시</li>
+                        <li><strong>시각화:</strong> 상관관계 분석에서 두 그룹이 서로 다른 색상으로 표시</li>
+                        <li><strong>비교 분석:</strong> 실험군과 대조군 간 차이점 및 유사점 시각적 확인</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="border-l-4 border-indigo-500 pl-4 bg-indigo-50 p-4 rounded-lg shadow-sm">
+                <h4 class="text-lg font-semibold mb-3 text-indigo-600">📋 결과 활용</h4>
+                <div class="space-y-3 text-sm">
+                    <div class="bg-indigo-100 border border-indigo-200 p-3 rounded-xl">
+                        <h5 class="font-medium mb-2 text-indigo-800">📊 시각화</h5>
+                        <p class="text-gray-600">인터랙티브 산점도로 데이터 분포 확인, 마우스 오버로 세부 정보 표시</p>
+                    </div>
+                    <div class="bg-indigo-100 border border-indigo-200 p-3 rounded-xl">
+                        <h5 class="font-medium mb-2 text-indigo-800">📁 결과 다운로드</h5>
+                        <p class="text-gray-600">"결과 다운로드" 버튼으로 CSV 파일 저장, 원본 데이터와 처리 결과 모두 포함</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="border-l-4 border-red-500 pl-4 bg-red-50 p-4 rounded-lg shadow-sm">
+                <h4 class="text-lg font-semibold mb-3 text-red-600">💡 팁과 주의사항</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <h5 class="font-medium mb-2 text-green-600">✅ 좋은 사용법</h5>
+                        <ul class="list-disc list-inside space-y-1 text-muted-foreground">
+                            <li>데이터 입력 전 샘플명과 날짜 먼저 설정</li>
+                            <li>임계값을 여러 번 조정해보며 최적값 찾기</li>
+                            <li>중요한 데이터는 반드시 저장하기</li>
+                            <li>다양한 방법으로 이상치 검출 비교</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h5 class="font-medium mb-2 text-red-600">⚠️ 주의사항</h5>
+                        <ul class="list-disc list-inside space-y-1 text-muted-foreground">
+                            <li>빈 셀이나 문자는 자동으로 제외됨</li>
+                            <li>최소 2개 이상의 유효한 데이터 필요</li>
+                            <li>새로고침 시 저장되지 않은 데이터 손실</li>
+                            <li>파일 업로드는 16MB 이하만 가능</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="border-l-4 border-orange-500 pl-4 bg-orange-50 p-4 rounded-lg shadow-sm">
+                <h4 class="text-lg font-semibold mb-3 text-orange-600">🧪 사용자 정의 필드 관리</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <h5 class="font-medium mb-2 text-orange-700">📊 사용자 정의 데이터 입력</h5>
+                        <ul class="list-disc list-inside space-y-1 text-muted-foreground">
+                            <li><strong>필드명 설정:</strong> 기본 "사용자 입력 필드(레퍼런스)"를 원하는 이름으로 변경</li>
+                            <li><strong>데이터 종류:</strong> 점도, 온도, 압력, 농도 등 어떤 데이터든 가능</li>
+                            <li><strong>패스별 입력:</strong> 패스별 평균값 폼에서 레퍼런스값 입력</li>
+                            <li><strong>테이블 확인:</strong> 입력된 값은 패스별 데이터 테이블에 표시</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h5 class="font-medium mb-2 text-orange-700">📈 상관관계 분석</h5>
+                        <ul class="list-disc list-inside space-y-1 text-muted-foreground">
+                            <li><strong>분석 조건:</strong> 사용자 정의 데이터 2개 이상 필요</li>
+                            <li><strong>시각화:</strong> Size(nm) vs 사용자 정의 필드 산점도 차트</li>
+                            <li><strong>기준값 비교:</strong> 점도 데이터인 경우 UHV, HV, LV 기준값과 비교</li>
+                            <li><strong>상관계수:</strong> Size-사용자 정의 필드 간 상관관계 수치 제공</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="mt-4 bg-orange-100 border border-orange-200 p-3 rounded-xl">
+                    <h5 class="font-medium mb-2 text-orange-800">💡 사용자 정의 필드 활용 가이드</h5>
+                    <ol class="list-decimal list-inside space-y-1 text-sm text-orange-700">
+                        <li><strong>1단계:</strong> 입력 필드명을 원하는 이름으로 변경 (예: "온도(℃)", "압력(bar)")</li>
+                        <li><strong>2단계:</strong> 이상치 검출로 패스별 Size(nm) 평균값 계산</li>
+                        <li><strong>3단계:</strong> 패스별 평균값 폼에서 Size/PI/사용자 정의 값 입력</li>
+                        <li><strong>4단계:</strong> "상관관계 분석" 버튼으로 시각화 확인</li>
+                        <li><strong>5단계:</strong> 필요시 기준값 대비 생산 데이터 위치 분석</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="border-l-4 border-indigo-500 pl-4 bg-indigo-50 p-4 rounded-lg shadow-sm">
+                <h4 class="text-lg font-semibold mb-3 text-indigo-600">🔄 예제 워크플로우</h4>
+                <div class="bg-indigo-100 border border-indigo-200 p-4 rounded-xl">
+                    <ol class="list-decimal list-inside space-y-2 text-sm">
+                        <li><strong>실험 정보 입력:</strong> "Sample_A", "2024-01-15", 패스 1</li>
+                        <li><strong>데이터 입력:</strong> 직접 입력 또는 Excel 파일 업로드</li>
+                        <li><strong>임계값 조정:</strong> Z-Score 3.0, IQR 1.5, MAD 3.5</li>
+                        <li><strong>계산 실행:</strong> "이상치 검출 및 계산" 클릭</li>
+                        <li><strong>결과 확인:</strong> 시각화와 통계 테이블 검토</li>
+                        <li><strong>실험군 데이터 저장:</strong> 그룹 구분 "실험군" 선택 후 Size/PI/사용자 정의 필드값 입력</li>
+                        <li><strong>대조군 데이터 저장:</strong> 그룹 구분 "대조군" 선택 후 Size/PI/사용자 정의 필드값 입력</li>
+                        <li><strong>상관관계 분석:</strong> "사용자 정의 필드 상관관계 분석"으로 실험군/대조군 구분 시각화 확인</li>
+                        <li><strong>데이터 저장:</strong> "Sample_A_Pass1"로 저장</li>
+                        <li><strong>결과 다운로드:</strong> CSV 파일로 보고서 작성용 다운로드</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

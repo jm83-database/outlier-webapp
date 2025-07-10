@@ -20,6 +20,28 @@ app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
+# Static files configuration for better caching
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 31536000  # 1 year for static files
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+
+# Cache control for static files
+@app.after_request
+def add_header(response):
+    """Add headers to both force latest IE rendering engine or Chrome Frame,
+    and also tell the browser not to cache the rendered page."""
+    response.headers['X-UA-Compatible'] = 'IE=Edge,chrome=1'
+    
+    # For static files, allow caching
+    if request.endpoint and request.endpoint.startswith('static'):
+        response.headers['Cache-Control'] = 'public, max-age=31536000'
+    else:
+        # For dynamic content, prevent caching
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+    
+    return response
+
 # Allowed file extensions for upload
 ALLOWED_EXTENSIONS = {'xlsx', 'xls', 'csv'}
 
@@ -108,6 +130,15 @@ def create_scatter_plot(data, title="Scatter Plot", outlier_info=None):
     )
     
     return json.dumps(fig, cls=PlotlyJSONEncoder)
+
+@app.after_request
+def after_request(response):
+    # HTML 캐시 무효화
+    if request.endpoint == 'index':
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+    return response
 
 @app.route('/')
 def index():
@@ -535,6 +566,7 @@ def add_pass_average():
     try:
         data = request.get_json()
         pass_number = data.get('pass_number')
+        group_type = data.get('group_type', 'experimental')  # 'experimental' 또는 'control'
         size_avg = data.get('size_avg')
         pi_avg = data.get('pi_avg')
         removal_method = data.get('removal_method', '')
@@ -553,14 +585,16 @@ def add_pass_average():
         if 'custom_data_field_name' not in current_dataset:
             current_dataset['custom_data_field_name'] = custom_data_name
         
-        # 중복 패스 번호 체크
-        existing_passes = [p['pass_number'] for p in current_dataset['pass_averages']]
-        if pass_number in existing_passes:
-            return jsonify({'status': 'error', 'message': f'패스 {pass_number}이 이미 존재합니다.'})
+        # 중복 패스 번호 및 그룹 체크
+        existing_passes = [(p['pass_number'], p.get('group_type', 'experimental')) for p in current_dataset['pass_averages']]
+        if (pass_number, group_type) in existing_passes:
+            group_name = '실험군' if group_type == 'experimental' else '대조군'
+            return jsonify({'status': 'error', 'message': f'패스 {pass_number} {group_name}이 이미 존재합니다.'})
         
         # 새 패스 데이터 추가
         new_pass = {
             'pass_number': int(pass_number),
+            'group_type': group_type,
             'size_avg': float(size_avg),
             'pi_avg': float(pi_avg),
             'removal_method': removal_method,
@@ -587,6 +621,7 @@ def delete_pass_average():
     try:
         data = request.get_json()
         pass_number = data.get('pass_number')
+        group_type = data.get('group_type', 'experimental')  # 그룹 타입 추가
         
         if pass_number is None:
             return jsonify({'status': 'error', 'message': '패스 번호가 필요합니다.'})
@@ -595,21 +630,23 @@ def delete_pass_average():
         if 'pass_averages' not in current_dataset:
             return jsonify({'status': 'error', 'message': '삭제할 패스 데이터가 없습니다.'})
         
-        # 해당 패스 번호 삭제
+        # 해당 패스 번호 및 그룹 타입 삭제
         original_length = len(current_dataset['pass_averages'])
         current_dataset['pass_averages'] = [
             p for p in current_dataset['pass_averages'] 
-            if p['pass_number'] != int(pass_number)
+            if not (p['pass_number'] == int(pass_number) and p.get('group_type', 'experimental') == group_type)
         ]
         
         if len(current_dataset['pass_averages']) == original_length:
-            return jsonify({'status': 'error', 'message': f'패스 {pass_number}을 찾을 수 없습니다.'})
+            group_name = '실험군' if group_type == 'experimental' else '대조군'
+            return jsonify({'status': 'error', 'message': f'패스 {pass_number} {group_name}을 찾을 수 없습니다.'})
         
         session['current_dataset'] = current_dataset
         
+        group_name = '실험군' if group_type == 'experimental' else '대조군'
         return jsonify({
             'status': 'success',
-            'message': f'패스 {pass_number}이 삭제되었습니다.',
+            'message': f'패스 {pass_number} {group_name}이 삭제되었습니다.',
             'pass_averages': current_dataset['pass_averages']
         })
         
@@ -764,7 +801,7 @@ def get_pass_trend_data():
 
 @app.route('/get_custom_data_correlation', methods=['GET'])
 def get_custom_data_correlation():
-    """사용자 정의 데이터와 size(nm) 간의 상관관계 분석"""
+    """사용자 정의 데이터와 size(nm) 간의 상관관계 분석 (실험군/대조군 구분)"""
     try:
         current_dataset = session.get('current_dataset', {})
         pass_averages = current_dataset.get('pass_averages', [])
@@ -772,18 +809,25 @@ def get_custom_data_correlation():
         production_date = current_dataset.get('production_date', '')
         custom_field_name = current_dataset.get('custom_data_field_name', '사용자 입력 필드(레퍼런스)')
         
-        # 사용자 정의 데이터가 있는 패스만 필터링
-        custom_data = []
+        # 실험군과 대조군 데이터 분리
+        experimental_data = []
+        control_data = []
+        
         for pass_data in pass_averages:
             if pass_data.get('custom_data_value') is not None:
-                custom_data.append({
+                data_point = {
                     'pass_number': pass_data['pass_number'],
-                    'size_avg': pass_data['size_avg'],  # size(nm) 데이터
+                    'size_avg': pass_data['size_avg'],
                     'custom_value': pass_data['custom_data_value']
-                })
+                }
+                
+                if pass_data.get('group_type', 'experimental') == 'experimental':
+                    experimental_data.append(data_point)
+                else:
+                    control_data.append(data_point)
         
-        if len(custom_data) < 2:
-            return jsonify({'status': 'error', 'message': f'{custom_field_name} 상관관계 분석을 위해서는 최소 2개의 {custom_field_name} 데이터가 필요합니다.'})
+        if len(experimental_data) == 0 and len(control_data) == 0:
+            return jsonify({'status': 'error', 'message': f'{custom_field_name} 상관관계 분석을 위해서는 최소 1개의 데이터가 필요합니다.'})
         
         # 상관관계 차트 생성
         fig = go.Figure()
@@ -811,22 +855,41 @@ def get_custom_data_correlation():
                     legendgroup='reference'
                 ))
         
-        # 생산 데이터 플롯
-        custom_values = [d['custom_value'] for d in custom_data]
-        sizes = [d['size_avg'] for d in custom_data]
-        pass_numbers = [d['pass_number'] for d in custom_data]
+        # 실험군 데이터 플롯 (파란색)
+        if experimental_data:
+            exp_custom_values = [d['custom_value'] for d in experimental_data]
+            exp_sizes = [d['size_avg'] for d in experimental_data]
+            exp_pass_numbers = [d['pass_number'] for d in experimental_data]
+            
+            fig.add_trace(go.Scatter(
+                x=exp_custom_values,
+                y=exp_sizes,
+                mode='markers+text',
+                text=[str(p) for p in exp_pass_numbers],
+                textposition='top center',
+                marker=dict(size=10, color='blue', symbol='circle',
+                           line=dict(width=2, color='black')),
+                name='실험군',
+                showlegend=True
+            ))
         
-        fig.add_trace(go.Scatter(
-            x=custom_values,
-            y=sizes,
-            mode='markers+text',
-            text=[str(p) for p in pass_numbers],
-            textposition='top center',
-            marker=dict(size=10, color='blue', symbol='circle',
-                       line=dict(width=2, color='black')),
-            name=f'{production_date}',
-            showlegend=True
-        ))
+        # 대조군 데이터 플롯 (초록색)
+        if control_data:
+            ctrl_custom_values = [d['custom_value'] for d in control_data]
+            ctrl_sizes = [d['size_avg'] for d in control_data]
+            ctrl_pass_numbers = [d['pass_number'] for d in control_data]
+            
+            fig.add_trace(go.Scatter(
+                x=ctrl_custom_values,
+                y=ctrl_sizes,
+                mode='markers+text',
+                text=[str(p) for p in ctrl_pass_numbers],
+                textposition='top center',
+                marker=dict(size=10, color='green', symbol='circle',
+                           line=dict(width=2, color='black')),
+                name='대조군',
+                showlegend=True
+            ))
         
         # 레이아웃 설정
         x_axis_title = f'{custom_field_name}'
@@ -849,21 +912,23 @@ def get_custom_data_correlation():
             )
         )
         
+        # 통계 정보
+        all_data = experimental_data + control_data
+        all_custom_values = [d['custom_value'] for d in all_data]
+        all_sizes = [d['size_avg'] for d in all_data]
+        
         # 상관계수 계산
-        if len(custom_values) >= 2:
-            correlation = np.corrcoef(custom_values, sizes)[0, 1]
+        if len(all_custom_values) >= 2:
+            correlation = np.corrcoef(all_custom_values, all_sizes)[0, 1]
             correlation = correlation if not np.isnan(correlation) else 0
         else:
             correlation = 0
         
-        # 통계 정보
         stats = {
             'correlation': float(correlation),
-            'data_count': len(custom_data),
-            'custom_mean': np.mean(custom_values),
-            'custom_std': np.std(custom_values),
-            'size_mean': np.mean(sizes),
-            'size_std': np.std(sizes),
+            'experimental_count': len(experimental_data),
+            'control_count': len(control_data),
+            'total_count': len(all_data),
             'sample_name': sample_name,
             'production_date': production_date,
             'custom_field_name': custom_field_name
@@ -873,7 +938,8 @@ def get_custom_data_correlation():
             'status': 'success',
             'custom_correlation_chart': json.dumps(fig, cls=PlotlyJSONEncoder),
             'statistics': stats,
-            'custom_data': custom_data,
+            'experimental_data': experimental_data,
+            'control_data': control_data,
             'custom_field_name': custom_field_name
         })
         

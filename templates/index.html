@@ -1,1755 +1,375 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Outlier Data Management System</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        border: "hsl(var(--border))",
-                        input: "hsl(var(--input))",
-                        ring: "hsl(var(--ring))",
-                        background: "hsl(var(--background))",
-                        foreground: "hsl(var(--foreground))",
-                        primary: {
-                            DEFAULT: "hsl(var(--primary))",
-                            foreground: "hsl(var(--primary-foreground))",
-                        },
-                        secondary: {
-                            DEFAULT: "hsl(var(--secondary))",
-                            foreground: "hsl(var(--secondary-foreground))",
-                        },
-                        destructive: {
-                            DEFAULT: "hsl(var(--destructive))",
-                            foreground: "hsl(var(--destructive-foreground))",
-                        },
-                        muted: {
-                            DEFAULT: "hsl(var(--muted))",
-                            foreground: "hsl(var(--muted-foreground))",
-                        },
-                        accent: {
-                            DEFAULT: "hsl(var(--accent))",
-                            foreground: "hsl(var(--accent-foreground))",
-                        },
-                        card: {
-                            DEFAULT: "hsl(var(--card))",
-                            foreground: "hsl(var(--card-foreground))",
-                        },
-                    },
-                }
-            }
-        }
-    </script>
-    <style>
-        :root {
-            --background: 0 0% 100%;
-            --foreground: 222.2 84% 4.9%;
-            --card: 0 0% 100%;
-            --card-foreground: 222.2 84% 4.9%;
-            --popover: 0 0% 100%;
-            --popover-foreground: 222.2 84% 4.9%;
-            --primary: 221.2 83.2% 53.3%;
-            --primary-foreground: 210 40% 98%;
-            --secondary: 210 40% 96%;
-            --secondary-foreground: 222.2 84% 4.9%;
-            --muted: 210 40% 96%;
-            --muted-foreground: 215.4 16.3% 46.9%;
-            --accent: 210 40% 96%;
-            --accent-foreground: 222.2 84% 4.9%;
-            --destructive: 0 84.2% 60.2%;
-            --destructive-foreground: 210 40% 98%;
-            --border: 214.3 31.8% 91.4%;
-            --input: 214.3 31.8% 91.4%;
-            --ring: 221.2 83.2% 53.3%;
-        }
-        
-        .dark {
-            --background: 222.2 84% 4.9%;
-            --foreground: 210 40% 98%;
-            --card: 222.2 84% 4.9%;
-            --card-foreground: 210 40% 98%;
-            --popover: 222.2 84% 4.9%;
-            --popover-foreground: 210 40% 98%;
-            --primary: 217.2 91.2% 59.8%;
-            --primary-foreground: 222.2 84% 4.9%;
-            --secondary: 217.2 32.6% 17.5%;
-            --secondary-foreground: 210 40% 98%;
-            --muted: 217.2 32.6% 17.5%;
-            --muted-foreground: 215 20.2% 65.1%;
-            --accent: 217.2 32.6% 17.5%;
-            --accent-foreground: 210 40% 98%;
-            --destructive: 0 62.8% 30.6%;
-            --destructive-foreground: 210 40% 98%;
-            --border: 217.2 32.6% 17.5%;
-            --input: 217.2 32.6% 17.5%;
-            --ring: 224.3 76.3% 94.1%;
-        }
-        
-        .btn {
-            @apply inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
-        }
-        
-        .btn-primary {
-            @apply bg-primary text-primary-foreground hover:bg-primary/90;
-        }
-        
-        .btn-secondary {
-            @apply bg-secondary text-secondary-foreground hover:bg-secondary/80;
-        }
-        
-        .btn-outline {
-            @apply border border-input bg-background hover:bg-accent hover:text-accent-foreground;
-        }
-        
-        .btn-destructive {
-            @apply bg-destructive text-destructive-foreground hover:bg-destructive/90;
-        }
-        
-        .btn-sm {
-            @apply h-9 px-3 text-xs;
-        }
-        
-        .btn-default {
-            @apply h-10 px-4 py-2;
-        }
-        
-        .card {
-            @apply rounded-lg border bg-white text-card-foreground shadow-sm;
-        }
-        
-        .input {
-            @apply flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
-        }
-        
-        .slider {
-            @apply relative flex w-full touch-none select-none items-center;
-        }
-        
-        .slider-track {
-            @apply relative h-2 w-full grow overflow-hidden rounded-full bg-secondary;
-        }
-        
-        .slider-range {
-            @apply absolute h-full bg-primary;
-        }
-        
-        .slider-thumb {
-            @apply block h-5 w-5 rounded-full border-2 border-primary bg-background ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
-        }
+{% extends "base.html" %}
 
-        /* 추가된 CSS */
-        .flex-1 h1 {
-            line-height: 1.1; /* 제목의 줄 간격을 줄여 글자가 잘리지 않도록 조정 */
-            margin-bottom: 0.5rem; /* 제목 아래 여백 추가 */
-        }
-        .flex-1 p {
-            margin-top: 0.2rem; /* 부제목 위 여백 조정 */
-        }
-    </style>
-</head>
-<body class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-    <div class="container mx-auto py-8 px-4 max-w-7xl">
-        <div class="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl p-8 mb-8 border border-white/20">
-            <div class="flex justify-between items-start mb-4">
-                <div class="flex-1">
-                    <h1 class="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-8">Outlier Data Management System</h1>
-                    <p class="text-gray-600 text-lg">실험 및 생산 데이터의 이상치 자동 검출·제거, 통계, 시각화 및 비교 분석</p>
-                </div>
-                <button onclick="showHelpModal()" class="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-3">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                    도움말
-                </button>
+{% block title %}Outlier Data Management System{% endblock %}
+
+{% block content %}
+    <!-- Header Section -->
+    <div class="text-center mb-12 fade-in">
+        <div class="flex flex-col lg:flex-row items-center justify-between">
+            <div class="mb-8 lg:mb-0">
+                <h1 class="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-8">Outlier Data Management System</h1>
+                <p class="text-gray-600 text-lg">실험 및 생산 데이터의 이상치 자동 검출·제거, 통계, 시각화 및 비교 분석</p>
+            </div>
+            <button onclick="showHelpModal()" class="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-3">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                도움말
+            </button>
+        </div>
+    </div>
+
+    <!-- Data Input Section -->
+    <div class="glass-card rounded-2xl shadow-xl p-8 mb-8 border border-white/20">
+        <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
+            <div class="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+            </div>
+            데이터 입력 및 관리
+        </h2>
+        
+        <!-- Basic Information Form -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">샘플명</label>
+                <input type="text" id="sample_name" value="{{ sample_name }}" 
+                       placeholder="예: Sample_A" 
+                       class="enhanced-input w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200">
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">생산일자</label>
+                <input type="date" id="production_date" value="{{ production_date }}" 
+                       class="enhanced-input w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200">
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">패스 수 (회차)</label>
+                <input type="number" id="pass_count" value="{{ pass_count }}" min="1" 
+                       placeholder="1" 
+                       class="enhanced-input w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200">
             </div>
         </div>
 
-        <div class="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl p-8 mb-8 border border-white/20">
-            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
-                <div class="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                    </svg>
-                </div>
-                데이터 입력 및 관리
-            </h2>
-            
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-3">샘플명</label>
-                    <input type="text" id="sample_name" value="{{ sample_name }}" 
-                           placeholder="샘플 이름을 입력하세요" class="w-full px-4 py-3 bg-gradient-to-r from-blue-50 to-blue-100 border-2 border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300">
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-3">생산일자</label>
-                    <input type="date" id="production_date" value="{{ production_date }}" class="w-full px-4 py-3 bg-gradient-to-r from-green-50 to-green-100 border-2 border-green-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-300">
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-3">패스 수(회차, iteration)</label>
-                    <input type="number" id="pass_count" value="{{ pass_count }}" min="1" class="w-full px-4 py-3 bg-gradient-to-r from-purple-50 to-purple-100 border-2 border-purple-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-300">
-                </div>
-            </div>
-
-            <div class="mb-6">
-                <label class="block text-sm font-semibold text-gray-700 mb-3">파일 업로드 (Excel/CSV)</label>
-                <div class="flex items-center gap-4">
-                    <input type="file" id="file_upload" accept=".xlsx,.xls,.csv" class="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-300">
-                    <button onclick="uploadFile()" class="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300">업로드</button>
-                </div>
-            </div>
-
-            <div class="flex flex-wrap gap-3 mb-6">
-                <button onclick="addRow()" class="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-5 py-2.5 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-300 flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-                    </svg>
-                    행 추가
-                </button>
-                <button onclick="showAddColumnModal()" class="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-5 py-2.5 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-300 flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z"/>
-                    </svg>
-                    컬럼 추가
-                </button>
-                <button onclick="resetData()" class="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-5 py-2.5 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-300 flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                    </svg>
-                    초기화
-                </button>
-                <button onclick="showSaveModal()" class="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white px-5 py-2.5 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-300 flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
-                    </svg>
-                    데이터셋 저장
-                </button>
-                <button onclick="showLoadModal()" class="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white px-5 py-2.5 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-300 flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"/>
-                    </svg>
-                    데이터셋 불러오기
-                </button>
-                <button onclick="showCompareModal()" class="bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white px-5 py-2.5 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-300 flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-                    </svg>
-                    데이터셋 비교
-                </button>
-            </div>
-
-            <div class="overflow-x-auto bg-white rounded-xl border border-gray-200 shadow-lg">
-                <table id="dataTable" class="w-full">
-                    <thead class="bg-gradient-to-r from-gray-50 to-gray-100">
-                        <tr id="tableHeader" class="border-b-2 border-gray-200"></tr>
-                    </thead>
-                    <tbody id="tableBody" class="divide-y divide-gray-200"></tbody>
-                </table>
-            </div>
-        </div>
-
-        <div class="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl p-8 mb-8 border border-white/20">
-            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
-                <div class="w-8 h-8 bg-gradient-to-r from-green-500 to-teal-600 rounded-lg flex items-center justify-center">
-                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-                    </svg>
-                </div>
-                이상치 검출 임계값 조정
-            </h2>
-            
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                    <label class="block text-sm font-medium mb-2">Z-Score 임계값</label>
-                    <div class="space-y-2">
-                        <input type="range" id="zscore_slider" min="1" max="5" step="0.1" value="3.0" 
-                               class="slider w-full" oninput="updateThresholdDisplay('zscore', this.value)">
-                        <div class="flex justify-between text-xs text-muted-foreground">
-                            <span>1.0</span>
-                            <span id="zscore_value" class="font-medium">3.0</span>
-                            <span>5.0</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium mb-2">IQR 임계값</label>
-                    <div class="space-y-2">
-                        <input type="range" id="iqr_slider" min="0.5" max="3.0" step="0.1" value="1.5" 
-                               class="slider w-full" oninput="updateThresholdDisplay('iqr', this.value)">
-                        <div class="flex justify-between text-xs text-muted-foreground">
-                            <span>0.5</span>
-                            <span id="iqr_value" class="font-medium">1.5</span>
-                            <span>3.0</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium mb-2">MAD 임계값</label>
-                    <div class="space-y-2">
-                        <input type="range" id="mad_slider" min="1" max="5" step="0.1" value="3.5" 
-                               class="slider w-full" oninput="updateThresholdDisplay('mad', this.value)">
-                        <div class="flex justify-between text-xs text-muted-foreground">
-                            <span>1.0</span>
-                            <span id="mad_value" class="font-medium">3.5</span>
-                            <span>5.0</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="mt-6 flex flex-wrap gap-2">
-                <button onclick="calculateWithThresholds()" class="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-5 py-2.5 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-300 flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                    </svg>
-                    이상치 검출 및 계산
-                </button>
-                <button id="downloadBtn" onclick="downloadCSV()" class="btn btn-secondary btn-default hidden bg-green-600 hover:bg-green-700 text-white">결과 다운로드 (CSV)</button>
-            </div>
-        </div>
-
-        <div id="results" class="space-y-6"></div>
-
-        <!-- 패스별 평균값 관리 섹션 -->
-        <div class="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl p-8 mb-8 border border-white/20">
-            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
-                <div class="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-600 rounded-lg flex items-center justify-center">
-                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
-                    </svg>
-                </div>
-                패스별 평균값 관리
-            </h2>
-            
-            <!-- 평균값 추가 폼 -->
-            <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6 p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200 items-end">
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2 text-center">패스 번호</label>
-                    <input type="number" id="pass_number_input" min="1" 
-                           placeholder="패스 번호" 
-                           class="w-full px-3 py-2 bg-white border-2 border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 text-center">
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2 text-center">Size(nm) 평균</label>
-                    <input type="number" id="size_avg_input" step="0.001" 
-                           placeholder="Size 평균값" 
-                           class="w-full px-3 py-2 bg-white border-2 border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 text-center">
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2 text-center">PI 평균</label>
-                    <input type="number" id="pi_avg_input" step="0.001" 
-                           placeholder="PI 평균값" 
-                           class="w-full px-3 py-2 bg-white border-2 border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 text-center">
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2 text-center">
-                        <div class="relative">
-                            <input type="text" id="custom_field_name" value="{{ custom_data_field_name }}" 
-                                   class="w-full px-3 py-1 text-center border-2 border-dashed border-orange-400 bg-gradient-to-r from-orange-50 to-yellow-50 rounded-lg font-bold text-xs text-orange-700 hover:border-orange-500 focus:border-orange-600 focus:ring-2 focus:ring-orange-300 transition-all duration-200 cursor-pointer" 
-                                   onchange="updateCustomFieldName()"
-                                   title="클릭하여 필드명을 변경하세요">
-                            <div class="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full animate-pulse"></div>
-                        </div>
-                    </label>
-                    <input type="number" id="custom_data_input" step="0.001" 
-                           placeholder="레퍼런스값" 
-                           class="w-full px-3 py-2 bg-white border-2 border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 text-center">
-                </div>
-                <div class="flex flex-col">
-                    <div class="text-sm text-orange-600 mb-3 opacity-90 font-medium text-center">👈 클릭하여 편집</div>
-                    <button onclick="addPassAverage()" 
-                            class="w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white px-4 py-2.5 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-                        </svg>
-                        추가
+        <!-- Data Table -->
+        <div class="mb-6">
+            <div class="flex flex-wrap items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-700">측정 데이터</h3>
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="dataManager.addRow()" class="btn-enhanced bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-all duration-300">
+                        행 추가
+                    </button>
+                    <button onclick="dataManager.addColumn()" class="btn-enhanced bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-all duration-300">
+                        컬럼 추가
+                    </button>
+                    <button onclick="dataManager.resetData()" class="btn-enhanced bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-all duration-300">
+                        초기화
                     </button>
                 </div>
             </div>
-
-            <!-- 계산 결과에서 추가 버튼 -->
-            <div class="mb-6">
-                <button id="addFromResultBtn" onclick="addFromCurrentResult()" 
-                        class="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-5 py-2.5 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-300 flex items-center gap-2 hidden">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"/>
-                    </svg>
-                    계산 결과에서 평균값 추가
-                </button>
-            </div>
             
-            <!-- 패스별 데이터 테이블 -->
-            <div class="overflow-x-auto bg-white rounded-xl border border-gray-200 shadow-lg mb-6">
-                <table id="passAveragesTable" class="w-full">
-                    <thead class="bg-gradient-to-r from-purple-50 to-pink-50">
-                        <tr class="border-b-2 border-purple-200">
-                            <th class="px-4 py-3 text-center font-semibold text-gray-700">패스 번호</th>
-                            <th class="px-4 py-3 text-center font-semibold text-gray-700">Size(nm) 평균</th>
-                            <th class="px-4 py-3 text-center font-semibold text-gray-700">PI 평균</th>
-                            <th id="custom_field_header" class="px-4 py-3 text-center font-semibold text-gray-700">{{ custom_data_field_name }}</th>
-                            <th class="px-4 py-3 text-center font-semibold text-gray-700">이상치 제거법</th>
-                            <th class="px-4 py-3 text-center font-semibold text-gray-700">등록일시</th>
-                            <th class="px-4 py-3 text-center font-semibold text-gray-700">작업</th>
+            <div class="overflow-x-auto bg-white rounded-xl border border-gray-200 shadow-lg">
+                <table id="dataTable" class="data-table w-full">
+                    <thead>
+                        <tr>
+                            <th class="px-4 py-2 text-center font-medium text-gray-700 bg-gray-100">No.</th>
+                            <th class="px-4 py-2 text-center font-medium text-gray-700 bg-gray-100">size(nm)</th>
+                            <th class="px-4 py-2 text-center font-medium text-gray-700 bg-gray-100">PI</th>
+                            <th class="px-4 py-2 text-center font-medium text-gray-700 bg-gray-100">작업</th>
                         </tr>
                     </thead>
-                    <tbody id="passAveragesBody" class="divide-y divide-gray-200">
-                        <!-- 데이터가 여기에 동적으로 추가됨 -->
+                    <tbody>
+                        <!-- 동적으로 생성됩니다 -->
                     </tbody>
                 </table>
             </div>
+        </div>
+
+        <!-- File Upload -->
+        <div class="border-t border-gray-200 pt-6">
+            <h3 class="text-lg font-semibold text-gray-700 mb-4">파일 업로드</h3>
+            <div class="flex items-center gap-4">
+                <input type="file" id="file_input" accept=".xlsx,.xls,.csv" 
+                       class="file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                <span class="text-sm text-gray-500">Excel (.xlsx, .xls) 또는 CSV 파일을 선택하세요</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dataset Management Section -->
+    <div class="glass-card rounded-2xl shadow-xl p-8 mb-8 border border-white/20">
+        <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
+            <div class="w-8 h-8 bg-gradient-to-r from-green-500 to-blue-600 rounded-lg flex items-center justify-center">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                </svg>
+            </div>
+            데이터셋 관리
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- 데이터셋 저장 -->
+            <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl border border-blue-200">
+                <h3 class="text-lg font-semibold text-blue-800 mb-4">💾 데이터셋 저장</h3>
+                <div class="space-y-4">
+                    <input type="text" id="dataset_name" placeholder="데이터셋 이름을 입력하세요" 
+                           class="enhanced-input w-full px-4 py-2 border-2 border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200">
+                    <button onclick="saveDataset()" 
+                            class="btn-enhanced w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-4 py-2 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-300">
+                        현재 데이터셋 저장
+                    </button>
+                </div>
+            </div>
             
-            <!-- 트렌드 분석 버튼 -->
-            <div class="flex gap-3 flex-wrap">
-                <button onclick="showTrendAnalysis()" 
-                        class="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-5 py-2.5 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-300 flex items-center gap-2">
+            <!-- 데이터셋 불러오기 -->
+            <div class="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-xl border border-green-200">
+                <h3 class="text-lg font-semibold text-green-800 mb-4">📂 데이터셋 불러오기</h3>
+                <div class="space-y-4">
+                    <select id="saved_datasets" 
+                            class="enhanced-input w-full px-4 py-2 border-2 border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200">
+                        <option value="">저장된 데이터셋 선택</option>
+                    </select>
+                    <div class="flex gap-2">
+                        <button onclick="loadDataset()" 
+                                class="btn-enhanced flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-4 py-2 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-300">
+                            불러오기
+                        </button>
+                        <button onclick="deleteDataset()" 
+                                class="btn-enhanced bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-4 py-2 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-300">
+                            삭제
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 데이터셋 비교 -->
+        <div class="mt-6 bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-xl border border-purple-200">
+            <h3 class="text-lg font-semibold text-purple-800 mb-4">📊 데이터셋 비교</h3>
+            <div class="flex flex-wrap gap-4">
+                <button onclick="showDatasetComparison()" 
+                        class="btn-enhanced bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white px-6 py-2 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-300 flex items-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
                     </svg>
-                    트렌드 분석 보기
+                    데이터셋 비교 분석
                 </button>
-                <button onclick="showCustomDataCorrelation()" 
-                        class="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white px-5 py-2.5 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-300 flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
-                    </svg>
-                    <span id="correlation_analysis_btn_text">{{ custom_data_field_name }} 상관관계 분석</span>
-                </button>
-                <button onclick="clearAllPasses()" 
-                        class="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-5 py-2.5 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-300 flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                    </svg>
-                    모든 패스 삭제
-                </button>
-            </div>
-        </div>
-        
-        <!-- 트렌드 분석 결과 -->
-        <div id="trendResults" class="space-y-6"></div>
-        
-
-        <div id="addColumnModal" class="fixed inset-0 bg-black bg-opacity-80 hidden z-50 flex items-center justify-center">
-            <div class="card p-6 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto 
-                        bg-gradient-to-br from-white to-blue-50 rounded-2xl border-4 
-                        border-blue-300 shadow-2xl backdrop-blur-sm">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">새 컬럼 추가</h3>
-                    <button onclick="closeModal('addColumnModal')" class="btn btn-outline btn-sm bg-red-500 hover:bg-red-600 text-white rounded-full p-2">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                        </svg>
-                    </button>
-                </div>
-                
-                <div class="space-y-4">
-                    <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                        <input type="text" id="new_column_name" placeholder="컬럼 이름을 입력하세요" 
-                               class="w-full p-3 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
-                    </div>
-                    
-                    <div class="flex gap-3 pt-4">
-                        <button onclick="addColumn()" 
-                                class="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-lg">
-                            추가
-                        </button>
-                        <button onclick="closeModal('addColumnModal')" 
-                                class="flex-1 bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-lg">
-                            취소
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="saveModal" class="fixed inset-0 bg-black bg-opacity-80 hidden z-50 flex items-center justify-center">
-            <div class="card p-6 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto 
-                        bg-gradient-to-br from-white to-purple-50 rounded-2xl border-4 
-                        border-purple-300 shadow-2xl backdrop-blur-sm">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">데이터셋 저장</h3>
-                    <button onclick="closeModal('saveModal')" class="btn btn-outline btn-sm bg-red-500 hover:bg-red-600 text-white rounded-full p-2">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                        </svg>
-                    </button>
-                </div>
-                
-                <div class="space-y-4">
-                    <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
-                        <input type="text" id="dataset_name" placeholder="데이터셋 이름을 입력하세요" 
-                               class="w-full p-3 border-2 border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white">
-                    </div>
-                    
-                    <div class="flex gap-3 pt-4">
-                        <button onclick="saveDataset()" 
-                                class="flex-1 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-lg">
-                            저장
-                        </button>
-                        <button onclick="closeModal('saveModal')" 
-                                class="flex-1 bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-lg">
-                            취소
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="loadModal" class="fixed inset-0 bg-black bg-opacity-80 hidden z-50 flex items-center justify-center">
-            <div class="card p-6 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto 
-                        bg-gradient-to-br from-white to-yellow-50 rounded-2xl border-4 
-                        border-yellow-300 shadow-2xl backdrop-blur-sm">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-2xl font-bold bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">데이터셋 불러오기</h3>
-                    <button onclick="closeModal('loadModal')" class="btn btn-outline btn-sm bg-red-500 hover:bg-red-600 text-white rounded-full p-2">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                        </svg>
-                    </button>
-                </div>
-                
-                <div class="space-y-4">
-                    <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-                        <select id="load_dataset_select" 
-                                class="w-full p-3 border-2 border-yellow-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 bg-white">
-                            <option value="">데이터셋 선택</option>
-                            {% for dataset in saved_datasets %}
-                            <option value="{{ dataset }}">{{ dataset }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    
-                    <div class="flex gap-3 pt-4">
-                        <button onclick="loadDataset()" 
-                                class="flex-1 bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-lg">
-                            불러오기
-                        </button>
-                        <button onclick="closeModal('loadModal')" 
-                                class="flex-1 bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-lg">
-                            취소
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="compareModal" class="fixed inset-0 bg-black bg-opacity-80 hidden z-50 flex items-center justify-center">
-            <div class="card p-6 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto 
-                        bg-gradient-to-br from-white to-indigo-50 rounded-2xl border-4 
-                        border-indigo-300 shadow-2xl backdrop-blur-sm">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">데이터셋 비교</h3>
-                    <button onclick="closeModal('compareModal')" class="btn btn-outline btn-sm bg-red-500 hover:bg-red-600 text-white rounded-full p-2">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                        </svg>
-                    </button>
-                </div>
-                
-                <div class="space-y-4">
-                    <div class="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
-                        <div class="space-y-3">
-                            {% for dataset in saved_datasets %}
-                            <label class="flex items-center space-x-3 p-2 hover:bg-indigo-100 rounded-lg transition-all cursor-pointer">
-                                <input type="checkbox" name="compare_datasets" value="{{ dataset }}" 
-                                       class="w-5 h-5 text-indigo-600 border-2 border-indigo-300 rounded focus:ring-2 focus:ring-indigo-500">
-                                <span class="font-medium text-indigo-800">{{ dataset }}</span>
-                            </label>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    
-                    <div class="flex gap-3 pt-4">
-                        <button onclick="compareDatasets()" 
-                                class="flex-1 bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-lg">
-                            비교
-                        </button>
-                        <button onclick="closeModal('compareModal')" 
-                                class="flex-1 bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-lg">
-                            취소
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="helpModal" class="fixed inset-0 bg-black bg-opacity-80 hidden z-50 flex items-center justify-center">
-            <div class="card p-6 w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto 
-                        bg-gradient-to-br from-white to-blue-50 rounded-2xl border-4 
-                        border-blue-300 shadow-2xl backdrop-blur-sm">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">사용 가이드</h3>
-                    <button onclick="closeModal('helpModal')" class="btn btn-outline btn-sm bg-red-500 hover:bg-red-600 text-white rounded-full p-2">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                        </svg>
-                    </button>
-                </div>
-                
-                <div class="space-y-8">
-                    <div class="border-l-4 border-primary pl-4 bg-blue-50 p-4 rounded-lg shadow-sm">
-                        <h4 class="text-lg font-semibold mb-3 text-primary">🚀 시작하기</h4>
-                        <div class="space-y-3 text-sm">
-                            <div class="bg-blue-100 border border-blue-200 p-3 rounded-xl">
-                                <strong>1단계:</strong> 샘플명, 생산일자, 패스 수(회차, iteration)를 입력하세요
-                            </div>
-                            <div class="bg-blue-100 border border-blue-200 p-3 rounded-xl">
-                                <strong>2단계:</strong> 데이터를 직접 입력하거나 Excel/CSV 파일을 업로드하세요
-                            </div>
-                            <div class="bg-blue-100 border border-blue-200 p-3 rounded-xl">
-                                <strong>3단계:</strong> 임계값을 조정하고 "이상치 검출 및 계산" 버튼을 클릭하세요
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="border-l-4 border-green-500 pl-4 bg-green-50 p-4 rounded-lg shadow-sm">
-                        <h4 class="text-lg font-semibold mb-3 text-green-600">📊 데이터 입력 방법</h4>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                            <div>
-                                <h5 class="font-medium mb-2">✏️ 직접 입력</h5>
-                                <ul class="list-disc list-inside space-y-1 text-muted-foreground">
-                                    <li>표의 셀에 직접 숫자를 입력</li>
-                                    <li>"행 추가" 버튼으로 데이터 추가</li>
-                                    <li>"컬럼 추가" 버튼으로 새로운 측정 항목 추가</li>
-                                </ul>
-                            </div>
-                            <div>
-                                <h5 class="font-medium mb-2">📁 파일 업로드</h5>
-                                <ul class="list-disc list-inside space-y-1 text-muted-foreground">
-                                    <li>Excel (.xlsx, .xls) 또는 CSV 파일 지원</li>
-                                    <li>size,(nm, PI 컬럼 자동 매핑</li>
-                                    <li>기타 숫자 컬럼도 자동 인식</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="border-l-4 border-blue-500 pl-4 bg-purple-50 p-4 rounded-lg shadow-sm">
-                        <h4 class="text-lg font-semibold mb-3 text-blue-600">🎯 이상치 검출 방법</h4>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                            <div class="bg-blue-100 border border-blue-200 p-3 rounded-xl">
-                                <h5 class="font-medium mb-2 text-blue-800">Z-Score</h5>
-                                <p class="text-gray-600 mb-2">평균에서 표준편차의 몇 배 떨어져 있는지 측정</p>
-                                <p class="text-xs text-blue-700"><strong>권장값:</strong> 2.0~3.0</p>
-                                <p class="text-xs text-blue-700"><strong>높을수록:</strong> 더 관대한 기준</p>
-                            </div>
-                            <div class="bg-green-100 border border-green-200 p-3 rounded-xl">
-                                <h5 class="font-medium mb-2 text-green-800">IQR</h5>
-                                <p class="text-gray-600 mb-2">사분위수 범위를 벗어나는 데이터 검출</p>
-                                <p class="text-xs text-green-700"><strong>권장값:</strong> 1.5~2.0</p>
-                                <p class="text-xs text-green-700"><strong>높을수록:</strong> 더 관대한 기준</p>
-                            </div>
-                            <div class="bg-purple-100 border border-purple-200 p-3 rounded-xl">
-                                <h5 class="font-medium mb-2 text-purple-800">MAD</h5>
-                                <p class="text-gray-600 mb-2">중앙값 절대편차 기반 검출</p>
-                                <p class="text-xs text-purple-700"><strong>권장값:</strong> 3.0~4.0</p>
-                                <p class="text-xs text-purple-700"><strong>높을수록:</strong> 더 관대한 기준</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="border-l-4 border-orange-500 pl-4 bg-yellow-50 p-4 rounded-lg shadow-sm">
-                        <h4 class="text-lg font-semibold mb-3 text-orange-600">💾 데이터 관리</h4>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                            <div>
-                                <h5 class="font-medium mb-2">📂 저장 및 불러오기</h5>
-                                <ul class="list-disc list-inside space-y-1 text-muted-foreground">
-                                    <li>"데이터셋 저장"으로 현재 작업 저장</li>
-                                    <li>"데이터셋 불러오기"로 이전 작업 복원</li>
-                                    <li>여러 실험 데이터를 개별 관리</li>
-                                </ul>
-                            </div>
-                            <div>
-                                <h5 class="font-medium mb-2">📈 비교 분석</h5>
-                                <ul class="list-disc list-inside space-y-1 text-muted-foreground">
-                                    <li>"데이터셋 비교"로 여러 실험 비교</li>
-                                    <li>시각적 그래프로 차이점 확인</li>
-                                    <li>통계 요약 테이블 제공</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="border-l-4 border-purple-500 pl-4 bg-purple-50 p-4 rounded-lg shadow-sm">
-                        <h4 class="text-lg font-semibold mb-3 text-purple-600">📈 패스별 데이터 관리</h4>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                            <div>
-                                <h5 class="font-medium mb-2 text-purple-700">📝 평균값 입력</h5>
-                                <ul class="list-disc list-inside space-y-1 text-muted-foreground">
-                                    <li><strong>수동 입력:</strong> 패스 번호, Size(nm) 평균, PI 평균 직접 입력</li>
-                                    <li><strong>계산 결과 활용:</strong> 이상치 검출 결과에서 자동 추가</li>
-                                    <li><strong>사용자 정의 필드:</strong> 점도, 온도, 압력 등 원하는 데이터 함께 저장</li>
-                                    <li><strong>필드명 변경:</strong> 입력 필드명을 직접 수정하여 데이터 종류 설정</li>
-                                </ul>
-                            </div>
-                            <div>
-                                <h5 class="font-medium mb-2 text-purple-700">📊 트렌드 분석</h5>
-                                <ul class="list-disc list-inside space-y-1 text-muted-foreground">
-                                    <li><strong>패스별 트렌드:</strong> Size/PI 값의 패스별 변화 추이</li>
-                                    <li><strong>상관관계 분석:</strong> Size-PI 간 상관계수 계산</li>
-                                    <li><strong>통계 요약:</strong> 평균, 표준편차, 변동계수 제공</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="border-l-4 border-indigo-500 pl-4 bg-indigo-50 p-4 rounded-lg shadow-sm">
-                        <h4 class="text-lg font-semibold mb-3 text-indigo-600">📋 결과 활용</h4>
-                        <div class="space-y-3 text-sm">
-                            <div class="bg-indigo-100 border border-indigo-200 p-3 rounded-xl">
-                                <h5 class="font-medium mb-2 text-indigo-800">📊 시각화</h5>
-                                <p class="text-gray-600">인터랙티브 산점도로 데이터 분포 확인, 마우스 오버로 세부 정보 표시</p>
-                            </div>
-                            <div class="bg-indigo-100 border border-indigo-200 p-3 rounded-xl">
-                                <h5 class="font-medium mb-2 text-indigo-800">📁 결과 다운로드</h5>
-                                <p class="text-gray-600">"결과 다운로드" 버튼으로 CSV 파일 저장, 원본 데이터와 처리 결과 모두 포함</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="border-l-4 border-red-500 pl-4 bg-red-50 p-4 rounded-lg shadow-sm">
-                        <h4 class="text-lg font-semibold mb-3 text-red-600">💡 팁과 주의사항</h4>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                            <div>
-                                <h5 class="font-medium mb-2 text-green-600">✅ 좋은 사용법</h5>
-                                <ul class="list-disc list-inside space-y-1 text-muted-foreground">
-                                    <li>데이터 입력 전 샘플명과 날짜 먼저 설정</li>
-                                    <li>임계값을 여러 번 조정해보며 최적값 찾기</li>
-                                    <li>중요한 데이터는 반드시 저장하기</li>
-                                    <li>다양한 방법으로 이상치 검출 비교</li>
-                                </ul>
-                            </div>
-                            <div>
-                                <h5 class="font-medium mb-2 text-red-600">⚠️ 주의사항</h5>
-                                <ul class="list-disc list-inside space-y-1 text-muted-foreground">
-                                    <li>빈 셀이나 문자는 자동으로 제외됨</li>
-                                    <li>최소 2개 이상의 유효한 데이터 필요</li>
-                                    <li>새로고침 시 저장되지 않은 데이터 손실</li>
-                                    <li>파일 업로드는 16MB 이하만 가능</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="border-l-4 border-orange-500 pl-4 bg-orange-50 p-4 rounded-lg shadow-sm">
-                        <h4 class="text-lg font-semibold mb-3 text-orange-600">🧪 사용자 정의 필드 관리</h4>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                            <div>
-                                <h5 class="font-medium mb-2 text-orange-700">📊 사용자 정의 데이터 입력</h5>
-                                <ul class="list-disc list-inside space-y-1 text-muted-foreground">
-                                    <li><strong>필드명 설정:</strong> 기본 "사용자 입력 필드(레퍼런스)"를 원하는 이름으로 변경</li>
-                                    <li><strong>데이터 종류:</strong> 점도, 온도, 압력, 농도 등 어떤 데이터든 가능</li>
-                                    <li><strong>패스별 입력:</strong> 패스별 평균값 폼에서 레퍼런스값 입력</li>
-                                    <li><strong>테이블 확인:</strong> 입력된 값은 패스별 데이터 테이블에 표시</li>
-                                </ul>
-                            </div>
-                            <div>
-                                <h5 class="font-medium mb-2 text-orange-700">📈 상관관계 분석</h5>
-                                <ul class="list-disc list-inside space-y-1 text-muted-foreground">
-                                    <li><strong>분석 조건:</strong> 사용자 정의 데이터 2개 이상 필요</li>
-                                    <li><strong>시각화:</strong> Size(nm) vs 사용자 정의 필드 산점도 차트</li>
-                                    <li><strong>기준값 비교:</strong> 점도 데이터인 경우 UHV, HV, LV 기준값과 비교</li>
-                                    <li><strong>상관계수:</strong> Size-사용자 정의 필드 간 상관관계 수치 제공</li>
-                                </ul>
-                            </div>
-                        </div>
-                        
-                        <div class="mt-4 bg-orange-100 border border-orange-200 p-3 rounded-xl">
-                            <h5 class="font-medium mb-2 text-orange-800">💡 사용자 정의 필드 활용 가이드</h5>
-                            <ol class="list-decimal list-inside space-y-1 text-sm text-orange-700">
-                                <li><strong>1단계:</strong> 입력 필드명을 원하는 이름으로 변경 (예: "온도(℃)", "압력(bar)")</li>
-                                <li><strong>2단계:</strong> 이상치 검출로 패스별 Size(nm) 평균값 계산</li>
-                                <li><strong>3단계:</strong> 패스별 평균값 폼에서 Size/PI/사용자 정의 값 입력</li>
-                                <li><strong>4단계:</strong> "상관관계 분석" 버튼으로 시각화 확인</li>
-                                <li><strong>5단계:</strong> 필요시 기준값 대비 생산 데이터 위치 분석</li>
-                            </ol>
-                        </div>
-                    </div>
-
-                    <div class="border-l-4 border-indigo-500 pl-4 bg-indigo-50 p-4 rounded-lg shadow-sm">
-                        <h4 class="text-lg font-semibold mb-3 text-indigo-600">🔄 예제 워크플로우</h4>
-                        <div class="bg-indigo-100 border border-indigo-200 p-4 rounded-xl">
-                            <ol class="list-decimal list-inside space-y-2 text-sm">
-                                <li><strong>실험 정보 입력:</strong> "Sample_A", "2024-01-15", 패스 1</li>
-                                <li><strong>데이터 입력:</strong> 직접 입력 또는 Excel 파일 업로드</li>
-                                <li><strong>임계값 조정:</strong> Z-Score 3.0, IQR 1.5, MAD 3.5</li>
-                                <li><strong>계산 실행:</strong> "이상치 검출 및 계산" 클릭</li>
-                                <li><strong>결과 확인:</strong> 시각화와 통계 테이블 검토</li>
-                                <li><strong>패스별 데이터 저장:</strong> Size/PI 평균값과 사용자 정의 필드값 입력</li>
-                                <li><strong>상관관계 분석:</strong> "사용자 정의 필드 상관관계 분석"으로 시각화 확인</li>
-                                <li><strong>데이터 저장:</strong> "Sample_A_Pass1"로 저장</li>
-                                <li><strong>결과 다운로드:</strong> CSV 파일로 보고서 작성용 다운로드</li>
-                            </ol>
-                        </div>
-                    </div>
+                <div id="saved_datasets_count" class="flex items-center text-sm text-gray-600">
+                    저장된 데이터셋: <span id="dataset_count">0</span>개
                 </div>
             </div>
         </div>
     </div>
 
-    <script>
-        let tableData = {{ table_data | tojson }};
+    <!-- Threshold Settings -->
+    <div class="glass-card rounded-2xl shadow-xl p-8 mb-8 border border-white/20">
+        <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
+            <div class="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-600 rounded-lg flex items-center justify-center">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4"/>
+                </svg>
+            </div>
+            이상치 검출 임계값 설정
+        </h2>
         
-        document.addEventListener('DOMContentLoaded', function() {
-            renderTable();
-        });
-        
-        function renderTable() {
-            const header = document.getElementById('tableHeader');
-            const tbody = document.getElementById('tableBody');
-            
-            // Clear existing content
-            header.innerHTML = '';
-            tbody.innerHTML = '';
-            
-            // Create header in specific order: No., size(nm), PI, then others
-            const orderedColumns = ['No.', 'size(nm)', 'PI'];
-            const allColumns = Object.keys(tableData);
-            const otherColumns = allColumns.filter(col => !orderedColumns.includes(col));
-            const columns = [...orderedColumns.filter(col => allColumns.includes(col)), ...otherColumns];
-            
-            columns.forEach(col => {
-                const th = document.createElement('th');
-                th.className = 'px-6 py-4 text-center font-semibold text-gray-700 border-r border-gray-200 last:border-r-0';
-                th.textContent = col;
-                header.appendChild(th);
-            });
-            
-            // Create rows
-            const rowCount = tableData['No.'] ? tableData['No.'].length : 0;
-            for (let i = 0; i < rowCount; i++) {
-                const row = tbody.insertRow();
-                row.className = 'hover:bg-blue-50 transition-colors duration-200';
-                
-                columns.forEach(col => {
-                    const cell = row.insertCell();
-                    cell.className = 'px-6 py-4 border-r border-gray-200 last:border-r-0';
-                    
-                    if (col === 'No.') {
-                        cell.textContent = tableData[col][i];
-                        cell.className += ' font-medium text-gray-600 bg-gray-50 text-center';
-                    } else {
-                        const input = document.createElement('input');
-                        input.type = 'number';
-                        input.step = 'any';
-                        input.className = 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-center';
-                        input.value = tableData[col][i] || '';
-                        input.onchange = function() {
-                            tableData[col][i] = this.value === '' ? null : parseFloat(this.value);
-                            updateData();
-                        };
-                        cell.appendChild(input);
-                    }
-                });
-            }
-        }
-        
-        function updateData() {
-            const sampleName = document.getElementById('sample_name').value;
-            const productionDate = document.getElementById('production_date').value;
-            const passCount = document.getElementById('pass_count').value;
-            
-            fetch('/update_data', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    sample_name: sampleName,
-                    production_date: productionDate,
-                    pass_count: parseInt(passCount),
-                    table_data: tableData
-                })
-            });
-        }
-        
-        function addRow() {
-            fetch('/add_row', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    tableData = data.table_data;
-                    renderTable();
-                }
-            });
-        }
-        
-        function showAddColumnModal() {
-            document.getElementById('addColumnModal').classList.remove('hidden');
-        }
-        
-        function addColumn() {
-            const columnName = document.getElementById('new_column_name').value.trim();
-            if (!columnName) {
-                alert('컬럼 이름을 입력해주세요.');
-                return;
-            }
-            
-            fetch('/add_column', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ column_name: columnName })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    tableData = data.table_data;
-                    renderTable();
-                    closeModal('addColumnModal');
-                    document.getElementById('new_column_name').value = '';
-                } else {
-                    alert(data.message);
-                }
-            });
-        }
-        
-        function resetData() {
-            if (confirm('모든 데이터가 초기화됩니다. 계속하시겠습니까?')) {
-                fetch('/reset_data', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        tableData = data.table_data;
-                        document.getElementById('sample_name').value = data.sample_name;
-                        document.getElementById('production_date').value = data.production_date;
-                        document.getElementById('pass_count').value = data.pass_count;
-                        document.getElementById('results').innerHTML = '';
-                        document.getElementById('downloadBtn').classList.add('hidden');
-                        renderTable();
-                    }
-                });
-            }
-        }
-        
-        function updateThresholdDisplay(method, value) {
-            document.getElementById(method + '_value').textContent = parseFloat(value).toFixed(1);
-        }
-        
-        function calculateWithThresholds() {
-            updateData();
-            
-            const thresholds = {
-                zscore: parseFloat(document.getElementById('zscore_slider').value),
-                iqr: parseFloat(document.getElementById('iqr_slider').value),
-                mad: parseFloat(document.getElementById('mad_slider').value)
-            };
-            
-            fetch('/calculate_with_thresholds', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ thresholds: thresholds })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'error') {
-                    document.getElementById('results').innerHTML = 
-                        `<div class="card p-4"><div class="text-destructive">오류: ${data.message}</div></div>`;
-                    return;
-                }
-                
-                displayResults(data);
-                document.getElementById('downloadBtn').classList.remove('hidden');
-            });
-        }
-        
-        let lastCalculationResult = null; // 마지막 계산 결과 저장
-        
-        function displayResults(data) {
-            lastCalculationResult = data; // 결과 저장
-            document.getElementById('addFromResultBtn').classList.remove('hidden'); // 버튼 표시
-            
-            let html = `
-                <div class="card p-6">
-                    <h2 class="text-xl font-semibold mb-4">계산 결과</h2>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                        <div><strong>샘플명:</strong> ${data.sample_name}</div>
-                        <div><strong>생산일자:</strong> ${data.production_date}</div>
-                        <div><strong>패스:</strong> ${data.pass_count}</div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Z-Score Threshold -->
+            <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl border border-blue-200">
+                <h3 class="text-lg font-semibold text-blue-800 mb-4">Z-Score 방법</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-blue-700 mb-2">임계값: <span id="zscore_threshold_value" class="font-bold">3.0</span></label>
+                        <input type="range" id="zscore_threshold" class="threshold-slider w-full" min="1.0" max="5.0" step="0.1" value="3.0">
+                        <div class="flex justify-between text-xs text-blue-600 mt-1">
+                            <span>1.0</span>
+                            <span>5.0</span>
+                        </div>
                     </div>
                 </div>
-            `;
-            
-            // 시각화
-            if (data.scatter_plot) {
-                html += `
-                    <div class="card p-6">
-                        <h3 class="text-lg font-semibold mb-4">데이터 시각화</h3>
-                        <div id="scatter_plot" class="w-full h-96"></div>
+            </div>
+
+            <!-- IQR Threshold -->
+            <div class="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-xl border border-green-200">
+                <h3 class="text-lg font-semibold text-green-800 mb-4">IQR 방법</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-green-700 mb-2">임계값: <span id="iqr_threshold_value" class="font-bold">1.5</span></label>
+                        <input type="range" id="iqr_threshold" class="threshold-slider w-full" min="0.5" max="3.0" step="0.1" value="1.5">
+                        <div class="flex justify-between text-xs text-green-600 mt-1">
+                            <span>0.5</span>
+                            <span>3.0</span>
+                        </div>
                     </div>
-                `;
-            }
-            
-            // 원본 데이터
-            html += `
-                <div class="card p-6">
-                    <h3 class="text-lg font-semibold mb-4">원본 데이터 (총 ${data.original_count}개)</h3>
-                    <div class="overflow-x-auto">
-                        <table class="w-full border-collapse border">
-                            <thead class="bg-gray-100">
-                                <tr>
-                                    <th class="border px-3 py-2">No.</th>
-                                    <th class="border px-3 py-2">size(nm)</th>
-                                    <th class="border px-3 py-2">PI</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y">
-            `;
-            
-            data.original_data.forEach(row => {
-                html += `<tr><td class="border px-3 py-2 text-center">${row['No.']}</td><td class="border px-3 py-2 text-center">${row['size(nm)'].toFixed(3)}</td><td class="border px-3 py-2 text-center">${row['PI'].toFixed(3)}</td></tr>`;
-            });
-            
-            html += `</tbody></table></div></div>`;
-            
-            // 각 방법별 결과
-            ['zscore', 'iqr', 'mad'].forEach(method => {
-                const result = data[method];
-                html += `
-                    <div class="card p-6">
-                        <h3 class="text-lg font-semibold mb-4">${result.name} 이상치 제거 결과</h3>
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 text-sm">
-                            <div class="bg-gray-100 border border-gray-200 p-3 rounded">
-                                <div class="font-medium">임계값</div>
-                                <div class="text-lg">${result.threshold}</div>
-                            </div>
-                            <div class="bg-gray-100 border border-gray-200 p-3 rounded">
-                                <div class="font-medium">처리된 데이터</div>
-                                <div class="text-lg">${result.count}개</div>
-                            </div>
-                            <div class="bg-gray-100 border border-gray-200 p-3 rounded">
-                                <div class="font-medium">제거된 이상치</div>
-                                <div class="text-lg">${result.outliers_count}개</div>
-                            </div>
-                            <div class="bg-gray-100 border border-gray-200 p-3 rounded">
-                                <div class="font-medium">처리율</div>
-                                <div class="text-lg">${((result.count / data.original_count) * 100).toFixed(1)}%</div>
-                            </div>
+                </div>
+            </div>
+
+            <!-- MAD Threshold -->
+            <div class="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-xl border border-purple-200">
+                <h3 class="text-lg font-semibold text-purple-800 mb-4">MAD 방법</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-purple-700 mb-2">임계값: <span id="mad_threshold_value" class="font-bold">3.5</span></label>
+                        <input type="range" id="mad_threshold" class="threshold-slider w-full" min="1.0" max="5.0" step="0.1" value="3.5">
+                        <div class="flex justify-between text-xs text-purple-600 mt-1">
+                            <span>1.0</span>
+                            <span>5.0</span>
                         </div>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                            <div class="bg-blue-50 border border-blue-200 p-4 rounded">
-                                <h4 class="font-medium mb-2 text-blue-800">Size(nm) 통계</h4>
-                                <div>평균: ${result.size_mean.toFixed(3)}</div>
-                                <div>표준편차: ${result.size_std.toFixed(3)}</div>
-                            </div>
-                            <div class="bg-green-50 border border-green-200 p-4 rounded">
-                                <h4 class="font-medium mb-2 text-green-800">PI 통계</h4>
-                                <div>평균: ${result.pi_mean.toFixed(3)}</div>
-                                <div>표준편차: ${result.pi_std.toFixed(3)}</div>
-                            </div>
-                        </div>
-                `;
-                
-                if (result.data.length > 0) {
-                    html += `
-                        <div class="overflow-x-auto">
-                            <table class="w-full border-collapse border text-sm">
-                                <thead class="bg-gray-100">
-                                    <tr>
-                                    <th class="border px-2 py-1">No.</th>
-                                    <th class="border px-2 py-1">size(nm)</th>
-                                    <th class="border px-2 py-1">PI</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y">
-                    `;
-                    
-                    result.data.forEach(row => {
-                        html += `<tr><td class="border px-2 py-1">${row['No.']}</td><td class="border px-2 py-1">${row['size(nm)'].toFixed(3)}</td><td class="border px-2 py-1">${row['PI'].toFixed(3)}</td></tr>`;
-                    });
-                    
-                    html += `</tbody></table></div>`;
-                }
-                
-                html += `</div>`;
-            });
-            
-            document.getElementById('results').innerHTML = html;
-            
-            // 시각화 렌더링
-            if (data.scatter_plot) {
-                setTimeout(() => {
-                    Plotly.newPlot('scatter_plot', JSON.parse(data.scatter_plot).data, JSON.parse(data.scatter_plot).layout);
-                }, 100);
-            }
-        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-6 flex flex-wrap gap-2">
+            <button onclick="calculateWithThresholds()" class="btn-enhanced bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-5 py-2.5 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-300 flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                </svg>
+                이상치 검출 및 계산
+            </button>
+            <button id="downloadBtn" onclick="downloadCSV()" class="btn-enhanced hidden bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-lg font-medium">결과 다운로드 (CSV)</button>
+        </div>
+    </div>
+
+    <!-- Results Section -->
+    <div id="results" class="space-y-6 fade-in"></div>
+
+    <!-- Pass Management Section -->
+    <div class="glass-card rounded-2xl shadow-xl p-8 mb-8 border border-white/20">
+        <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
+            <div class="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-600 rounded-lg flex items-center justify-center">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                </svg>
+            </div>
+            패스별 평균값 관리
+        </h2>
         
-        function uploadFile() {
-            const fileInput = document.getElementById('file_upload');
-            const file = fileInput.files[0];
-            
-            if (!file) {
-                alert('파일을 선택해주세요.');
-                return;
-            }
-            
-            const formData = new FormData();
-            formData.append('file', file);
-            
-            fetch('/upload_file', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    tableData = data.table_data;
-                    renderTable();
-                    alert(data.message);
-                } else {
-                    alert(data.message);
-                }
-            });
-        }
+        <!-- Pass Average Input Form -->
+        <div class="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6 p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200 items-end">
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2 text-center">패스 번호</label>
+                <input type="number" id="pass_number_input" min="1" 
+                       placeholder="패스 번호" 
+                       class="enhanced-input w-full px-3 py-2 bg-white border-2 border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 text-center">
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2 text-center">그룹 구분</label>
+                <select id="group_type_select" class="enhanced-input w-full px-3 py-2 bg-white border-2 border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200">
+                    <option value="experimental">실험군</option>
+                    <option value="control">대조군</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2 text-center">Size(nm) 평균</label>
+                <input type="number" id="size_avg_input" step="0.001" 
+                       placeholder="Size 평균값" 
+                       class="enhanced-input w-full px-3 py-2 bg-white border-2 border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 text-center">
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2 text-center">PI 평균</label>
+                <input type="number" id="pi_avg_input" step="0.001" 
+                       placeholder="PI 평균값" 
+                       class="enhanced-input w-full px-3 py-2 bg-white border-2 border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 text-center">
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2 text-center">
+                    <div class="relative">
+                        <input type="text" id="custom_field_name" value="{{ custom_data_field_name }}" 
+                               class="custom-field-highlight w-full px-3 py-1 text-center border-2 border-dashed border-orange-400 bg-gradient-to-r from-orange-50 to-yellow-50 rounded-lg font-bold text-xs text-orange-700 hover:border-orange-500 focus:border-orange-600 focus:ring-2 focus:ring-orange-300 transition-all duration-200 cursor-pointer" 
+                               onchange="updateCustomFieldName()"
+                               title="클릭하여 필드명을 변경하세요">
+                        <div class="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full animate-pulse"></div>
+                    </div>
+                </label>
+                <input type="number" id="custom_data_input" step="0.001" 
+                       placeholder="레퍼런스값" 
+                       class="enhanced-input w-full px-3 py-2 bg-white border-2 border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 text-center">
+            </div>
+            <div class="flex flex-col">
+                <div class="text-sm text-orange-600 mb-3 opacity-90 font-medium text-center">👈 클릭하여 편집</div>
+                <button onclick="addPassAverage()" 
+                        class="btn-enhanced w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white px-4 py-2.5 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                    </svg>
+                    추가
+                </button>
+            </div>
+        </div>
+
+        <!-- Add from Result Button -->
+        <div class="mb-6">
+            <button id="addFromResultBtn" onclick="addFromCurrentResult()" 
+                    class="btn-enhanced bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-5 py-2.5 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-300 flex items-center gap-2 hidden">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"/>
+                </svg>
+                계산 결과에서 평균값 추가
+            </button>
+        </div>
         
-        function showSaveModal() {
-            document.getElementById('saveModal').classList.remove('hidden');
-        }
-        
-        function saveDataset() {
-            const datasetName = document.getElementById('dataset_name').value.trim();
-            if (!datasetName) {
-                alert('데이터셋 이름을 입력해주세요.');
-                return;
-            }
-            
-            updateData();
-            
-            fetch('/save_dataset', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ dataset_name: datasetName })
-            })
-            .then(response => response.json())
-            .then(data => {
-                alert(data.message);
-                if (data.status === 'success') {
-                    closeModal('saveModal');
-                    document.getElementById('dataset_name').value = '';
-                    location.reload(); // 저장된 데이터셋 목록 업데이트
-                }
-            });
-        }
-        
-        function showLoadModal() {
-            document.getElementById('loadModal').classList.remove('hidden');
-        }
-        
-        function loadDataset() {
-            const datasetName = document.getElementById('load_dataset_select').value;
-            if (!datasetName) {
-                alert('데이터셋을 선택해주세요.');
-                return;
-            }
-            
-            fetch('/load_dataset', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ dataset_name: datasetName })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    tableData = data.table_data;
-                    document.getElementById('sample_name').value = data.sample_name;
-                    document.getElementById('production_date').value = data.production_date;
-                    document.getElementById('pass_count').value = data.pass_count;
-                    renderTable();
-                    closeModal('loadModal');
-                } else {
-                    alert(data.message);
-                }
-            });
-        }
-        
-        function showCompareModal() {
-            document.getElementById('compareModal').classList.remove('hidden');
-        }
-        
-        function compareDatasets() {
-            const selected = Array.from(document.querySelectorAll('input[name="compare_datasets"]:checked'))
-                                 .map(cb => cb.value);
-            
-            if (selected.length < 2) {
-                alert('비교하려면 최소 2개의 데이터셋을 선택해주세요.');
-                return;
-            }
-            
-            fetch('/compare_datasets', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ dataset_names: selected })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    displayComparisonResults(data);
-                    closeModal('compareModal');
-                } else {
-                    alert(data.message);
-                }
-            });
-        }
-        
-        function displayComparisonResults(data) {
-            let html = `
-                <div class="card p-6">
-                    <h2 class="text-xl font-semibold mb-4">데이터셋 비교 결과</h2>
-                    <div id="comparison_plot" class="w-full h-96 mb-6"></div>
-                    
-                    <h3 class="text-lg font-semibold mb-4">통계 요약</h3>
-                    <div class="overflow-x-auto">
-                        <table class="w-full border-collapse border">
-                            <thead class="bg-gray-100">
-                                <tr>
-                                    <th class="border px-3 py-2">데이터셋</th>
-                                    <th class="border px-3 py-2">데이터 개수</th>
-                                    <th class="border px-3 py-2">Size 평균</th>
-                                    <th class="border px-3 py-2">Size 표준편차</th>
-                                    <th class="border px-3 py-2">PI 평균</th>
-                                    <th class="border px-3 py-2">PI 표준편차</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y">
-            `;
-            
-            Object.keys(data.stats_summary).forEach(dataset => {
-                const stats = data.stats_summary[dataset];
-                html += `
-                    <tr>
-                        <td class="border px-3 py-2 font-medium">${dataset}</td>
-                        <td class="border px-3 py-2">${stats.count}</td>
-                        <td class="border px-3 py-2">${stats.size_mean.toFixed(3)}</td>
-                        <td class="border px-3 py-2">${stats.size_std.toFixed(3)}</td>
-                        <td class="border px-3 py-2">${stats.pi_mean.toFixed(3)}</td>
-                        <td class="border px-3 py-2">${stats.pi_std.toFixed(3)}</td>
+        <!-- Pass Averages Table -->
+        <div class="overflow-x-auto bg-white rounded-xl border border-gray-200 shadow-lg mb-6">
+            <table id="passAveragesTable" class="data-table w-full">
+                <thead class="bg-gradient-to-r from-purple-50 to-pink-50">
+                    <tr class="border-b-2 border-purple-200">
+                        <th class="px-4 py-3 text-center font-semibold text-gray-700">패스 번호</th>
+                        <th class="px-4 py-3 text-center font-semibold text-gray-700">그룹 구분</th>
+                        <th class="px-4 py-3 text-center font-semibold text-gray-700">Size(nm) 평균</th>
+                        <th class="px-4 py-3 text-center font-semibold text-gray-700">PI 평균</th>
+                        <th id="custom_field_header" class="px-4 py-3 text-center font-semibold text-gray-700">{{ custom_data_field_name }}</th>
+                        <th class="px-4 py-3 text-center font-semibold text-gray-700">이상치 제거법</th>
+                        <th class="px-4 py-3 text-center font-semibold text-gray-700">등록일시</th>
+                        <th class="px-4 py-3 text-center font-semibold text-gray-700">작업</th>
                     </tr>
-                `;
-            });
-            
-            html += `</tbody></table></div></div>`;
-            
-            document.getElementById('results').innerHTML = html;
-            
-            // 비교 플롯 렌더링
-            setTimeout(() => {
-                Plotly.newPlot('comparison_plot', JSON.parse(data.comparison_plot).data, JSON.parse(data.comparison_plot).layout);
-            }, 100);
-        }
+                </thead>
+                <tbody id="passAveragesBody" class="divide-y divide-gray-200">
+                    <!-- 데이터가 여기에 동적으로 추가됨 -->
+                </tbody>
+            </table>
+        </div>
         
-        function downloadCSV() {
-            window.location.href = '/download_csv';
-        }
-        
-        function showHelpModal() {
-            document.getElementById('helpModal').classList.remove('hidden');
-        }
-        
-        function closeModal(modalId) {
-            document.getElementById(modalId).classList.add('hidden');
-        }
-        
-        // Event listeners
-        document.getElementById('sample_name').addEventListener('input', updateData);
-        document.getElementById('production_date').addEventListener('change', updateData);
-        document.getElementById('pass_count').addEventListener('change', updateData);
-        
-        // 패스별 평균값 관리 함수들
-        function addPassAverage() {
-            const passNumber = document.getElementById('pass_number_input').value;
-            const sizeAvg = document.getElementById('size_avg_input').value;
-            const piAvg = document.getElementById('pi_avg_input').value;
-            const customData = document.getElementById('custom_data_input').value;
-            const customFieldName = document.getElementById('custom_field_name').value;
-            
-            if (!passNumber || !sizeAvg || !piAvg) {
-                alert('패스 번호, Size 평균, PI 평균은 필수 입력 항목입니다.');
-                return;
-            }
-            
-            const requestData = {
-                pass_number: parseInt(passNumber),
-                size_avg: parseFloat(sizeAvg),
-                pi_avg: parseFloat(piAvg),
-                removal_method: 'Manual',
-                threshold_used: 'N/A',
-                custom_data_name: customFieldName
-            };
-            
-            // 사용자 정의 데이터가 입력된 경우에만 포함
-            if (customData && customData.trim() !== '') {
-                requestData.custom_data_value = parseFloat(customData);
-            }
-            
-            fetch('/add_pass_average', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(requestData)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    alert(data.message);
-                    // 입력 필드 초기화
-                    document.getElementById('pass_number_input').value = '';
-                    document.getElementById('size_avg_input').value = '';
-                    document.getElementById('pi_avg_input').value = '';
-                    document.getElementById('custom_data_input').value = '';
-                    renderPassAveragesTable(data.pass_averages);
-                } else {
-                    alert(data.message);
-                }
-            });
-        }
-        
-        function addFromCurrentResult() {
-            if (!lastCalculationResult) {
-                alert('계산 결과가 없습니다. 먼저 이상치 검출을 실행해주세요.');
-                return;
-            }
-            
-            // Z-score 결과를 기본으로 사용 (가장 일반적)
-            const zscore = lastCalculationResult.zscore;
-            const currentPass = document.getElementById('pass_count').value || 1;
-            
-            const customFieldName = document.getElementById('custom_field_name').value;
-            
-            fetch('/add_pass_average', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    pass_number: parseInt(currentPass),
-                    size_avg: zscore.size_mean,
-                    pi_avg: zscore.pi_mean,
-                    removal_method: 'Z-Score',
-                    threshold_used: zscore.threshold.toString(),
-                    custom_data_name: customFieldName
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    alert(data.message);
-                    renderPassAveragesTable(data.pass_averages);
-                } else {
-                    alert(data.message);
-                }
-            });
-        }
-        
-        function renderPassAveragesTable(passAverages) {
-            const tbody = document.getElementById('passAveragesBody');
-            tbody.innerHTML = '';
-            
-            if (!passAverages || passAverages.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-500">등록된 패스별 평균값이 없습니다.</td></tr>';
-                return;
-            }
-            
-            // 패스 번호 순으로 정렬
-            const sortedPasses = passAverages.sort((a, b) => a.pass_number - b.pass_number);
-            
-            sortedPasses.forEach(pass => {
-                const row = tbody.insertRow();
-                row.className = 'hover:bg-purple-50 transition-colors duration-200';
-                
-                row.innerHTML = `
-                    <td class="px-4 py-3 text-center font-medium">${pass.pass_number}</td>
-                    <td class="px-4 py-3 text-center">${pass.size_avg.toFixed(3)}</td>
-                    <td class="px-4 py-3 text-center">${pass.pi_avg.toFixed(3)}</td>
-                    <td class="px-4 py-3 text-center">${pass.custom_data_value !== null && pass.custom_data_value !== undefined ? pass.custom_data_value.toFixed(1) : '-'}</td>
-                    <td class="px-4 py-3 text-center">
-                        <span class="px-2 py-1 text-xs rounded-full ${
-                            pass.removal_method === 'Z-Score' ? 'bg-blue-100 text-blue-800' :
-                            pass.removal_method === 'IQR' ? 'bg-green-100 text-green-800' :
-                            pass.removal_method === 'MAD' ? 'bg-purple-100 text-purple-800' :
-                            'bg-gray-100 text-gray-800'
-                        }">
-                            ${pass.removal_method}
-                        </span>
-                    </td>
-                    <td class="px-4 py-3 text-center text-sm text-gray-600">${pass.timestamp}</td>
-                    <td class="px-4 py-3 text-center">
-                        <button onclick="deletePassAverage(${pass.pass_number})" 
-                                class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs transition-colors duration-200">
-                            삭제
-                        </button>
-                    </td>
-                `;
-            });
-        }
-        
-        function deletePassAverage(passNumber) {
-            if (!confirm(`패스 ${passNumber}을 삭제하시겠습니까?`)) {
-                return;
-            }
-            
-            fetch('/delete_pass_average', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ pass_number: passNumber })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    alert(data.message);
-                    renderPassAveragesTable(data.pass_averages);
-                } else {
-                    alert(data.message);
-                }
-            });
-        }
-        
-        function clearAllPasses() {
-            if (!confirm('모든 패스 데이터를 삭제하시겠습니까?')) {
-                return;
-            }
-            
-            // 현재 세션의 패스 데이터 초기화
-            fetch('/update_data', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    sample_name: document.getElementById('sample_name').value,
-                    production_date: document.getElementById('production_date').value,
-                    pass_count: document.getElementById('pass_count').value,
-                    table_data: tableData,
-                    clear_passes: true
-                })
-            })
-            .then(() => {
-                renderPassAveragesTable([]);
-                document.getElementById('trendResults').innerHTML = '';
-                alert('모든 패스 데이터가 삭제되었습니다.');
-            });
-        }
-        
-        function showTrendAnalysis() {
-            fetch('/get_pass_trend_data')
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'error') {
-                    alert(data.message);
-                    return;
-                }
-                
-                displayTrendResults(data);
-            });
-        }
-        
-        function showViscosityCorrelation() {
-            fetch('/get_viscosity_correlation_data')
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'error') {
-                    alert(data.message);
-                    return;
-                }
-                
-                displayViscosityResults(data);
-            });
-        }
-        
-        function displayViscosityResults(data) {
-            const stats = data.statistics;
-            
-            let html = `
-                <div class="card p-6">
-                    <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
-                        <div class="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-600 rounded-lg flex items-center justify-center">
-                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
-                            </svg>
-                        </div>
-                        점도 상관관계 분석 결과
-                    </h2>
-                    
-                    <!-- 통계 요약 -->
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                        <div class="bg-orange-50 border border-orange-200 p-4 rounded-xl text-center">
-                            <div class="text-2xl font-bold text-orange-600">${stats.data_count}</div>
-                            <div class="text-sm text-gray-600">점도 데이터 수</div>
-                        </div>
-                        <div class="bg-blue-50 border border-blue-200 p-4 rounded-xl text-center">
-                            <div class="text-lg font-bold text-blue-600">${stats.correlation.toFixed(3)}</div>
-                            <div class="text-sm text-gray-600">Size-점도 상관계수</div>
-                            <div class="text-xs text-gray-500">${Math.abs(stats.correlation) > 0.7 ? '강한 상관' : Math.abs(stats.correlation) > 0.3 ? '중간 상관' : '약한 상관'}</div>
-                        </div>
-                        <div class="bg-green-50 border border-green-200 p-4 rounded-xl text-center">
-                            <div class="text-lg font-bold text-green-600">${stats.viscosity_mean.toFixed(1)}</div>
-                            <div class="text-sm text-gray-600">평균 점도 (cP)</div>
-                            <div class="text-xs text-gray-500">±${stats.viscosity_std.toFixed(1)}</div>
-                        </div>
-                        <div class="bg-purple-50 border border-purple-200 p-4 rounded-xl text-center">
-                            <div class="text-lg font-bold text-purple-600">${stats.size_mean.toFixed(1)}</div>
-                            <div class="text-sm text-gray-600">평균 Size (nm)</div>
-                            <div class="text-xs text-gray-500">±${stats.size_std.toFixed(1)}</div>
-                        </div>
-                    </div>
-                    
-                    <!-- 샘플 정보 -->
-                    <div class="bg-gradient-to-r from-gray-50 to-gray-100 p-4 rounded-xl mb-6">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                            <div><strong>샘플명:</strong> ${stats.sample_name}</div>
-                            <div><strong>생산일자:</strong> ${stats.production_date}</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- 점도 상관관계 차트 -->
-                <div class="card p-6">
-                    <h3 class="text-lg font-semibold mb-4">Size(nm) vs 점도 상관관계 (draw_plot.py 스타일)</h3>
-                    <div id="viscosity_correlation_chart" class="w-full" style="height: 600px;"></div>
-                </div>
-            `;
-            
-            document.getElementById('trendResults').innerHTML = html;
-            
-            // 차트 렌더링
-            setTimeout(() => {
-                const chartData = JSON.parse(data.viscosity_correlation_chart);
-                Plotly.newPlot('viscosity_correlation_chart', chartData.data, chartData.layout, {responsive: true});
-            }, 100);
-        }
-        
-        function displayTrendResults(data) {
-            const stats = data.statistics;
-            
-            let html = `
-                <div class="card p-6">
-                    <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
-                        <div class="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
-                            </svg>
-                        </div>
-                        패스별 트렌드 분석 결과
-                    </h2>
-                    
-                    <!-- 통계 요약 -->
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                        <div class="bg-blue-50 border border-blue-200 p-4 rounded-xl text-center">
-                            <div class="text-2xl font-bold text-blue-600">${stats.pass_count}</div>
-                            <div class="text-sm text-gray-600">총 패스 수</div>
-                        </div>
-                        <div class="bg-green-50 border border-green-200 p-4 rounded-xl text-center">
-                            <div class="text-lg font-bold text-green-600">${stats.size_trend === 'increasing' ? '↗️ 증가' : stats.size_trend === 'decreasing' ? '↘️ 감소' : '➡️ 안정'}</div>
-                            <div class="text-sm text-gray-600">Size 트렌드</div>
-                            ${stats.size_slope ? `<div class="text-xs text-gray-500">기울기: ${stats.size_slope.toFixed(4)}</div>` : ''}
-                        </div>
-                        <div class="bg-purple-50 border border-purple-200 p-4 rounded-xl text-center">
-                            <div class="text-lg font-bold text-purple-600">${stats.pi_trend === 'increasing' ? '↗️ 증가' : stats.pi_trend === 'decreasing' ? '↘️ 감소' : '➡️ 안정'}</div>
-                            <div class="text-sm text-gray-600">PI 트렌드</div>
-                            ${stats.pi_slope ? `<div class="text-xs text-gray-500">기울기: ${stats.pi_slope.toFixed(4)}</div>` : ''}
-                        </div>
-                        <div class="bg-orange-50 border border-orange-200 p-4 rounded-xl text-center">
-                            <div class="text-sm font-bold text-orange-600">Size CV: ${stats.size_cv.toFixed(1)}%</div>
-                            <div class="text-sm font-bold text-orange-600">PI CV: ${stats.pi_cv.toFixed(1)}%</div>
-                            <div class="text-sm text-gray-600">변동계수</div>
-                        </div>
-                    </div>
-                    
-                    <!-- 고급 통계 정보 -->
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                        <div class="bg-blue-50 border border-blue-200 p-4 rounded-xl">
-                            <h4 class="font-semibold text-blue-800 mb-3">Size(nm) 통계</h4>
-                            <div class="space-y-2 text-sm">
-                                <div class="flex justify-between">
-                                    <span>평균:</span>
-                                    <span class="font-medium">${stats.size_mean ? stats.size_mean.toFixed(3) : 'N/A'}</span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span>표준편차:</span>
-                                    <span class="font-medium">${stats.size_std ? stats.size_std.toFixed(3) : 'N/A'}</span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span>범위:</span>
-                                    <span class="font-medium">${stats.size_min && stats.size_max ? `${stats.size_min.toFixed(2)} ~ ${stats.size_max.toFixed(2)}` : 'N/A'}</span>
-                                </div>
-                                ${stats.size_capability ? `<div class="flex justify-between text-orange-600">
-                                    <span>공정능력:</span>
-                                    <span class="font-medium">${stats.size_capability.toFixed(1)}%</span>
-                                </div>` : ''}
-                            </div>
-                        </div>
-                        
-                        <div class="bg-purple-50 border border-purple-200 p-4 rounded-xl">
-                            <h4 class="font-semibold text-purple-800 mb-3">PI 통계</h4>
-                            <div class="space-y-2 text-sm">
-                                <div class="flex justify-between">
-                                    <span>평균:</span>
-                                    <span class="font-medium">${stats.pi_mean ? stats.pi_mean.toFixed(3) : 'N/A'}</span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span>표준편차:</span>
-                                    <span class="font-medium">${stats.pi_std ? stats.pi_std.toFixed(3) : 'N/A'}</span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span>범위:</span>
-                                    <span class="font-medium">${stats.pi_min && stats.pi_max ? `${stats.pi_min.toFixed(3)} ~ ${stats.pi_max.toFixed(3)}` : 'N/A'}</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="bg-green-50 border border-green-200 p-4 rounded-xl">
-                            <h4 class="font-semibold text-green-800 mb-3">상관관계 분석</h4>
-                            <div class="space-y-2 text-sm">
-                                <div class="flex justify-between">
-                                    <span>Size-PI 상관계수:</span>
-                                    <span class="font-medium ${stats.correlation ? (Math.abs(stats.correlation) > 0.7 ? 'text-red-600' : Math.abs(stats.correlation) > 0.3 ? 'text-orange-600' : 'text-green-600') : ''}">
-                                        ${stats.correlation ? stats.correlation.toFixed(3) : 'N/A'}
-                                    </span>
-                                </div>
-                                <div class="text-xs text-gray-600">
-                                    ${stats.correlation ? (
-                                        Math.abs(stats.correlation) > 0.7 ? '강한 상관관계' :
-                                        Math.abs(stats.correlation) > 0.3 ? '중간 상관관계' :
-                                        '약한 상관관계'
-                                    ) : '데이터 부족'}
-                                </div>
-                                <div class="mt-2 text-xs">
-                                    <div class="w-full bg-gray-200 rounded-full h-2">
-                                        <div class="bg-gradient-to-r from-blue-400 to-purple-500 h-2 rounded-full" 
-                                             style="width: ${stats.correlation ? Math.abs(stats.correlation) * 100 : 0}%"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Size 트렌드 차트 -->
-                <div class="card p-6">
-                    <h3 class="text-lg font-semibold mb-4">Size(nm) 평균값 트렌드</h3>
-                    <div id="size_trend_chart" class="w-full h-96"></div>
-                </div>
-                
-                <!-- PI 트렌드 차트 -->
-                <div class="card p-6">
-                    <h3 class="text-lg font-semibold mb-4">PI 평균값 트렌드</h3>
-                    <div id="pi_trend_chart" class="w-full h-96"></div>
-                </div>
-                
-                <!-- 상관관계 차트 -->
-                <div class="card p-6">
-                    <h3 class="text-lg font-semibold mb-4">Size vs PI 상관관계</h3>
-                    <div id="correlation_chart" class="w-full h-96"></div>
-                </div>
-            `;
-            
-            document.getElementById('trendResults').innerHTML = html;
-            
-            // 차트 렌더링
-            setTimeout(() => {
-                Plotly.newPlot('size_trend_chart', JSON.parse(data.size_trend_chart).data, JSON.parse(data.size_trend_chart).layout);
-                Plotly.newPlot('pi_trend_chart', JSON.parse(data.pi_trend_chart).data, JSON.parse(data.pi_trend_chart).layout);
-                Plotly.newPlot('correlation_chart', JSON.parse(data.correlation_chart).data, JSON.parse(data.correlation_chart).layout);
-            }, 100);
-        }
-        
-        // 페이지 로드 시 패스 데이터 렌더링
-        document.addEventListener('DOMContentLoaded', function() {
-            renderTable();
-            // 세션에서 패스 데이터 가져오기
-            const currentDataset = {{ session.get('current_dataset', {}) | tojson }};
-            if (currentDataset && currentDataset.pass_averages) {
-                renderPassAveragesTable(currentDataset.pass_averages);
-            }
-        });
-        
-        // 사용자 정의 필드명 업데이트 함수
-        function updateCustomFieldName() {
-            const customFieldName = document.getElementById('custom_field_name').value;
-            const customFieldHeader = document.getElementById('custom_field_header');
-            const correlationBtnText = document.getElementById('correlation_analysis_btn_text');
-            
-            // 테이블 헤더 업데이트
-            customFieldHeader.textContent = customFieldName;
-            
-            // 상관관계 분석 버튼 텍스트 업데이트
-            correlationBtnText.textContent = customFieldName + ' 상관관계 분석';
-        }
-        
-        // 사용자 정의 데이터 상관관계 분석
-        function showCustomDataCorrelation() {
-            fetch('/get_custom_data_correlation')
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'error') {
-                    alert(data.message);
-                    return;
-                }
-                
-                displayCustomDataResults(data);
-            });
-        }
-        
-        // 사용자 정의 데이터 결과 표시
-        function displayCustomDataResults(data) {
-            const resultsDiv = document.getElementById('viscosity_results');
-            const customFieldName = data.custom_field_name || '사용자 입력 필드(레퍼런스)';
-            
-            resultsDiv.innerHTML = `
-                <div class="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-white/20">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
-                        <div class="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-600 rounded-lg flex items-center justify-center">
-                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
-                            </svg>
-                        </div>
-                        ${customFieldName} 상관관계 분석 결과
-                    </h2>
-                    
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                        <div class="bg-orange-50 p-4 rounded-xl border border-orange-200">
-                            <div class="text-2xl font-bold text-orange-600">${data.statistics.data_count}</div>
-                            <div class="text-sm text-gray-600">${customFieldName} 데이터 수</div>
-                        </div>
-                        <div class="bg-red-50 p-4 rounded-xl border border-red-200">
-                            <div class="text-2xl font-bold text-red-600">${data.statistics.correlation.toFixed(3)}</div>
-                            <div class="text-sm text-gray-600">Size-${customFieldName} 상관계수</div>
-                        </div>
-                        <div class="bg-yellow-50 p-4 rounded-xl border border-yellow-200">
-                            <div class="text-2xl font-bold text-yellow-600">${data.statistics.custom_mean.toFixed(1)}</div>
-                            <div class="text-sm text-gray-600">평균 ${customFieldName}</div>
-                        </div>
-                        <div class="bg-green-50 p-4 rounded-xl border border-green-200">
-                            <div class="text-2xl font-bold text-green-600">${data.statistics.size_mean.toFixed(1)}</div>
-                            <div class="text-sm text-gray-600">평균 Size (nm)</div>
-                        </div>
-                    </div>
-                    
-                    <div class="bg-gray-50 rounded-xl p-6">
-                        <h3 class="text-lg font-semibold mb-4">Size(nm) vs ${customFieldName} 상관관계</h3>
-                        <div id="custom_correlation_chart"></div>
-                    </div>
-                </div>
-            `;
-            
-            // 차트 렌더링
-            const chartData = JSON.parse(data.custom_correlation_chart);
-            Plotly.newPlot('custom_correlation_chart', chartData.data, chartData.layout, {responsive: true});
-            
-            resultsDiv.classList.remove('hidden');
-            resultsDiv.scrollIntoView({ behavior: 'smooth' });
-        }
-        
-        // Close modals when clicking outside
-        document.addEventListener('click', function(e) {
-            if (e.target.classList.contains('fixed')) {
-                e.target.classList.add('hidden');
-            }
-        });
-    </script>
-</body>
-</html>
+        <!-- Analysis Buttons -->
+        <div class="flex flex-wrap gap-3">
+            <button onclick="showTrendAnalysis()" 
+                    class="btn-enhanced bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white px-5 py-2.5 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-300 flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                </svg>
+                트렌드 분석 보기
+            </button>
+            <button onclick="showCustomDataCorrelation()" 
+                    class="btn-enhanced bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white px-5 py-2.5 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-300 flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
+                </svg>
+                <span id="correlation_analysis_btn_text">{{ custom_data_field_name }} 상관관계 분석</span>
+            </button>
+            <button onclick="clearAllPasses()" 
+                    class="btn-enhanced bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-5 py-2.5 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-300 flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+                모든 패스 삭제
+            </button>
+        </div>
+    </div>
+
+    <!-- Trend Results Placeholder -->
+    <div id="trend_results" class="space-y-6"></div>
+
+    <!-- Viscosity Results Placeholder -->
+    <div id="viscosity_results" class="space-y-6 hidden"></div>
+
+    <!-- Dataset Comparison Results Placeholder -->
+    <div id="comparison_results" class="space-y-6 hidden"></div>
+
+    <!-- Include Help Modal -->
+    {% include 'components/help_modal.html' %}
+
+{% endblock %}
+
+{% block extra_scripts %}
+    <!-- 페이지별 추가 스크립트가 있다면 여기에 -->
+{% endblock %}
