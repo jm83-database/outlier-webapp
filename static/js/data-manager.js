@@ -47,7 +47,7 @@ class DataManager {
 
     // 현재 테이블 데이터 가져오기
     getCurrentTableData() {
-        const tableData = { 'No.': [], 'size(nm)': [], 'PI': [] };
+        const tableData = { 'No.': [], 'Size(nm)': [], 'PI': [] };
         const tbody = document.querySelector('#dataTable tbody');
         
         if (!tbody) return tableData;
@@ -61,7 +61,7 @@ class DataManager {
             // size(nm) 값
             const sizeInput = cells[1]?.querySelector('input');
             const sizeValue = utils.validateAndConvertNumber(sizeInput?.value);
-            tableData['size(nm)'].push(sizeValue);
+            tableData['Size(nm)'].push(sizeValue);
             
             // PI 값
             const piInput = cells[2]?.querySelector('input');
@@ -164,20 +164,33 @@ class DataManager {
         thead.innerHTML = '<th class="px-4 py-2 text-center font-medium text-gray-700 bg-gray-100">No.</th>';
         
         // 고정 순서 컬럼들
-        const fixedColumns = ['size(nm)', 'PI'];
+        const fixedColumns = ['Size(nm)', 'PI'];
         const allColumns = Object.keys(tableData).filter(key => key !== 'No.');
         
+        // 컬럼 이름 매핑 (대소문자 무시)
+        const columnMap = {};
+        allColumns.forEach(col => {
+            columnMap[col.toLowerCase()] = col;
+        });
+
         // 먼저 고정 순서 컬럼들 추가
         fixedColumns.forEach(column => {
-            if (allColumns.includes(column)) {
-                thead.innerHTML += `<th class="px-4 py-2 text-center font-medium text-gray-700 bg-gray-100">${column}</th>`;
+            const realCol = columnMap[column.toLowerCase()];
+            if (realCol) {
+                // 항상 "Size(nm)"로 표기
+                const displayName = realCol.toLowerCase() === 'size(nm)' ? 'Size(nm)' : realCol;
+                thead.innerHTML += `<th class="px-4 py-2 text-center font-medium text-gray-700 bg-gray-100">${displayName}</th>`;
             }
         });
-        
+
         // 그 다음 나머지 컬럼들 추가
-        allColumns.filter(column => !fixedColumns.includes(column)).forEach(column => {
-            thead.innerHTML += `<th class="px-4 py-2 text-center font-medium text-gray-700 bg-gray-100">${column}</th>`;
-        });
+        allColumns
+            .filter(column => !fixedColumns.map(c => c.toLowerCase()).includes(column.toLowerCase()))
+            .forEach(column => {
+                // 항상 "Size(nm)"로 표기
+                const displayName = column.toLowerCase() === 'size(nm)' ? 'Size(nm)' : column;
+                thead.innerHTML += `<th class="px-4 py-2 text-center font-medium text-gray-700 bg-gray-100">${displayName}</th>`;
+            });
         
         thead.innerHTML += '<th class="px-4 py-2 text-center font-medium text-gray-700 bg-gray-100">작업</th>';
 
