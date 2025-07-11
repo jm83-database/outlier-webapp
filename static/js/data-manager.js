@@ -305,15 +305,14 @@ class DataManager {
         fileInput.value = '';
     }
 
-    // 테이블 데이터 다운로드
-    async downloadTableData(dataOnly = false) {
+    // 테이블 데이터 다운로드 (단순화된 버전)
+    async downloadTableData() {
         try {
             // 현재 테이블 데이터를 먼저 업데이트
             await this.updateData();
             
-            // 다운로드 실행
-            const url = dataOnly ? '/download_table_data?data_only=true' : '/download_table_data';
-            const response = await fetch(url);
+            // 데이터만 다운로드 (스마트 업로드가 있으므로 단순하게)
+            const response = await fetch('/download_table_data?data_only=true');
             
             if (response.ok) {
                 const blob = await response.blob();
@@ -337,8 +336,7 @@ class DataManager {
                 window.URL.revokeObjectURL(downloadUrl);
                 document.body.removeChild(a);
                 
-                const message = dataOnly ? '테이블 데이터가 다운로드되었습니다 (데이터만).' : '테이블 데이터가 다운로드되었습니다 (메타데이터 포함).';
-                utils.showNotification(message, 'success');
+                utils.showNotification('📊 테이블 데이터가 다운로드되었습니다.', 'success');
             } else {
                 const result = await response.json();
                 utils.showNotification(result.message || '다운로드 중 오류가 발생했습니다.', 'error');
@@ -346,32 +344,6 @@ class DataManager {
         } catch (error) {
             utils.showNotification('다운로드 중 오류가 발생했습니다.', 'error');
         }
-    }
-
-    // 다운로드 옵션 선택
-    showDownloadOptions() {
-        const modal = document.createElement('div');
-        modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-        modal.innerHTML = `
-            <div class="bg-white p-6 rounded-xl shadow-xl max-w-md w-full mx-4">
-                <h3 class="text-lg font-semibold mb-4">다운로드 옵션 선택</h3>
-                <div class="space-y-3">
-                    <button onclick="dataManager.downloadTableData(true); this.closest('.fixed').remove();" 
-                            class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-medium transition-all duration-300">
-                        데이터만 다운로드 (업로드 호환)
-                    </button>
-                    <button onclick="dataManager.downloadTableData(false); this.closest('.fixed').remove();" 
-                            class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-medium transition-all duration-300">
-                        메타데이터 포함 다운로드
-                    </button>
-                    <button onclick="this.closest('.fixed').remove();" 
-                            class="w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 rounded-lg font-medium transition-all duration-300">
-                        취소
-                    </button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
     }
 }
 
