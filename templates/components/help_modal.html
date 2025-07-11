@@ -25,6 +25,9 @@
                     <div class="bg-blue-100 border border-blue-200 p-3 rounded-xl">
                         <strong>3단계:</strong> 임계값을 조정하고 "이상치 검출 및 계산" 버튼을 클릭하세요
                     </div>
+                    <div class="bg-blue-100 border border-blue-200 p-3 rounded-xl">
+                        <strong>4단계:</strong> 결과 확인 후 데이터셋 저장 또는 다운로드하세요
+                    </div>
                 </div>
             </div>
 
@@ -75,25 +78,59 @@
             </div>
 
             <div class="border-l-4 border-orange-500 pl-4 bg-yellow-50 p-4 rounded-lg shadow-sm">
-                <h4 class="text-lg font-semibold mb-3 text-orange-600">💾 데이터 관리</h4>
+                <h4 class="text-lg font-semibold mb-3 text-orange-600">💾 데이터셋 관리</h4>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                     <div>
                         <h5 class="font-medium mb-2">📂 저장 및 불러오기</h5>
                         <ul class="list-disc list-inside space-y-1 text-muted-foreground">
-                            <li>"데이터셋 저장"으로 현재 작업 저장</li>
-                            <li>"데이터셋 불러오기"로 이전 작업 복원</li>
-                            <li>"데이터셋 삭제"로 불필요한 데이터 제거</li>
+                            <li><strong>데이터셋 저장:</strong> 이름 입력 후 현재 작업 저장</li>
+                            <li><strong>데이터셋 불러오기:</strong> 드롭다운에서 선택 후 이전 작업 복원</li>
+                            <li><strong>데이터셋 삭제:</strong> 확인 후 불필요한 데이터 안전하게 제거</li>
+                            <li><strong>저장된 개수 표시:</strong> 현재 저장된 데이터셋 개수 실시간 확인</li>
+                            <li><strong>자동 지속성:</strong> 저장된 데이터는 브라우저 세션 간 유지</li>
                             <li>여러 실험 데이터를 개별 관리</li>
                         </ul>
                     </div>
                     <div>
-                        <h5 class="font-medium mb-2">📈 데이터 다운로드</h5>
+                        <h5 class="font-medium mb-2">📊 데이터셋 비교</h5>
+                        <ul class="list-disc list-inside space-y-1 text-muted-foreground">
+                            <li><strong>다중 선택:</strong> 체크박스로 여러 데이터셋 선택</li>
+                            <li><strong>시각화 비교:</strong> 선택한 데이터셋들을 하나의 차트로 비교</li>
+                            <li><strong>통계 요약:</strong> 각 데이터셋의 평균, 표준편차 등 비교</li>
+                            <li><strong>최소 조건:</strong> 비교하려면 최소 2개의 데이터셋 필요</li>
+                            <li><strong>결과 위치:</strong> 데이터셋 관리 섹션 바로 아래에 표시</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="mt-4 bg-orange-100 border border-orange-200 p-3 rounded-xl">
+                    <h5 class="font-medium mb-2 text-orange-800">💡 데이터셋 관리 워크플로우</h5>
+                    <ol class="list-decimal list-inside space-y-1 text-sm text-orange-700">
+                        <li><strong>데이터 입력:</strong> 샘플 정보 및 측정 데이터 입력</li>
+                        <li><strong>이상치 검출:</strong> 임계값 설정 후 계산 실행</li>
+                        <li><strong>결과 저장:</strong> 분석 결과를 의미 있는 이름으로 저장</li>
+                        <li><strong>데이터 비교:</strong> 여러 실험 결과 간 비교 분석 (결과는 데이터셋 관리 섹션 아래 표시)</li>
+                        <li><strong>결과 활용:</strong> 패스별 관리 또는 보고서 작성</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="border-l-4 border-indigo-500 pl-4 bg-indigo-50 p-4 rounded-lg shadow-sm">
+                <h4 class="text-lg font-semibold mb-3 text-indigo-600">📈 데이터 다운로드</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <h5 class="font-medium mb-2">🔄 기본 다운로드</h5>
                         <ul class="list-disc list-inside space-y-1 text-muted-foreground">
                             <li><strong>테이블 다운로드:</strong> 클릭 한 번으로 즉시 CSV 다운로드</li>
-                            <li><strong>이상치 결과 다운로드:</strong> 이상치 제거 후 분석 결과만</li>
-                            <li><strong>🆕 데이터+이상치 결과 다운로드:</strong> 원본 데이터와 각 방법별 이상치 판정 결과 통합</li>
                             <li><strong>스마트 업로드:</strong> 어떤 형식이든 자동 파싱</li>
                             <li><strong>완벽한 호환:</strong> 다운로드 → 편집 → 업로드 무제한 반복</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h5 class="font-medium mb-2">🔍 분석 결과 다운로드</h5>
+                        <ul class="list-disc list-inside space-y-1 text-muted-foreground">
+                            <li><strong>이상치 결과 다운로드:</strong> 이상치 제거 후 분석 결과만</li>
+                            <li><strong>🆕 데이터+이상치 결과 다운로드:</strong> 원본 데이터와 각 방법별 이상치 판정 결과 통합</li>
                         </ul>
                     </div>
                 </div>
@@ -334,10 +371,9 @@
                         <li><strong>임계값 조정:</strong> Z-Score 3.0, IQR 1.5, MAD 3.5</li>
                         <li><strong>계산 실행:</strong> "이상치 검출 및 계산" 클릭</li>
                         <li><strong>결과 확인:</strong> 시각화와 통계 테이블 검토</li>
-                        <li><strong>실험군 데이터 저장:</strong> 그룹 구분 "실험군" 선택 후 Size/PI/사용자 정의 필드값 입력</li>
-                        <li><strong>대조군 데이터 저장:</strong> 그룹 구분 "대조군" 선택 후 Size/PI/사용자 정의 필드값 입력</li>
-                        <li><strong>상관관계 분석:</strong> "사용자 정의 필드 상관관계 분석"으로 실험군/대조군 구분 시각화 확인</li>
-                        <li><strong>데이터 저장:</strong> "Sample_A_Pass1"로 저장</li>
+                        <li><strong>데이터셋 저장:</strong> 결과를 "Sample_A_Pass1"로 저장</li>
+                        <li><strong>패스별 관리:</strong> 실험군/대조군 데이터 입력 및 상관관계 분석</li>
+                        <li><strong>다중 실험 비교:</strong> 여러 패스나 샘플 간 비교 분석</li>
                         <li><strong>결과 다운로드:</strong> 
                             <br>• "이상치 결과 다운로드": 정제된 데이터만
                             <br>• "데이터+이상치 결과 다운로드": 원본 데이터와 이상치 판정 결과</li>

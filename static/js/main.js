@@ -211,17 +211,22 @@ function initializeDataTable() {
 
 // 데이터셋 관리 함수들
 async function saveDataset() {
-    const datasetName = prompt('데이터셋 이름을 입력하세요:');
-    if (!datasetName || datasetName.trim() === '') {
+    const datasetNameInput = document.getElementById('dataset_name');
+    const datasetName = datasetNameInput.value.trim();
+    
+    if (!datasetName) {
+        utils.showNotification('데이터셋 이름을 입력해주세요.', 'error');
+        datasetNameInput.focus();
         return;
     }
 
     try {
-        const result = await utils.apiRequest('/save_dataset', { dataset_name: datasetName.trim() }, 'POST');
+        const result = await utils.apiRequest('/save_dataset', { dataset_name: datasetName }, 'POST');
         
         if (result.status === 'success') {
             utils.showNotification(result.message, 'success');
-            updateSavedDatasetsList();
+            datasetNameInput.value = ''; // 입력 필드 초기화
+            await updateSavedDatasetsList();
         } else {
             utils.showNotification(result.message, 'error');
         }
@@ -292,6 +297,33 @@ async function loadDataset() {
     }
 }
 
+async function deleteDataset() {
+    const selectElement = document.getElementById('saved_datasets');
+    const datasetName = selectElement.value;
+    
+    if (!datasetName) {
+        utils.showNotification('삭제할 데이터셋을 선택해주세요.', 'info');
+        return;
+    }
+
+    if (!confirm(`"${datasetName}" 데이터셋을 삭제하시겠습니까?`)) {
+        return;
+    }
+
+    try {
+        const result = await utils.apiRequest('/delete_dataset', { dataset_name: datasetName }, 'POST');
+        
+        if (result.status === 'success') {
+            utils.showNotification(result.message, 'success');
+            updateSavedDatasetsList();
+        } else {
+            utils.showNotification(result.message, 'error');
+        }
+    } catch (error) {
+        utils.showNotification('데이터셋 삭제 중 오류가 발생했습니다.', 'error');
+    }
+}
+
 async function getSavedDatasets() {
     try {
         const result = await utils.apiRequest('/get_saved_datasets', {}, 'GET');
@@ -306,6 +338,11 @@ async function updateSavedDatasetsList() {
     const datasets = await getSavedDatasets();
     const selectElement = document.getElementById('saved_datasets');
     const countElement = document.getElementById('dataset_count');
+    
+    if (!selectElement) {
+        console.error('saved_datasets 엘리먼트를 찾을 수 없습니다');
+        return;
+    }
     
     // 기존 옵션 제거 (첫 번째 옵션 제외)
     selectElement.innerHTML = '<option value="">저장된 데이터셋 선택</option>';
@@ -324,34 +361,14 @@ async function updateSavedDatasetsList() {
     }
 }
 
-async function deleteDataset() {
-    const selectElement = document.getElementById('saved_datasets');
-    const datasetName = selectElement.value;
-    
-    if (!datasetName) {
-        utils.showNotification('삭제할 데이터셋을 선택해주세요.', 'info');
-        return;
-    }
-    
-    if (!confirm(`데이터셋 "${datasetName}"을 삭제하시겠습니까?`)) {
-        return;
-    }
-    
-    try {
-        const result = await utils.apiRequest('/delete_dataset', { dataset_name: datasetName }, 'POST');
-        
-        if (result.status === 'success') {
-            await updateSavedDatasetsList();
-            utils.showNotification('데이터셋이 성공적으로 삭제되었습니다.', 'success');
-        } else {
-            utils.showNotification(result.message, 'error');
-        }
-    } catch (error) {
-        utils.showNotification('데이터셋 삭제 중 오류가 발생했습니다.', 'error');
-    }
-}
 
 async function showDatasetComparison() {
+    // 이전 비교 결과 숨기기
+    const comparisonDiv = document.getElementById('comparison_results');
+    if (comparisonDiv) {
+        comparisonDiv.classList.add('hidden');
+    }
+    
     const datasets = await getSavedDatasets();
     
     if (datasets.length < 2) {
@@ -359,11 +376,19 @@ async function showDatasetComparison() {
         return;
     }
     
+    // 데이터셋 선택 모달 표시
+    const selectedDatasets = await showDatasetSelectionModal(datasets);
+    
+    if (!selectedDatasets || selectedDatasets.length < 2) {
+        utils.showNotification('비교하려면 최소 2개의 데이터셋을 선택해주세요.', 'info');
+        return;
+    }
+    
     try {
-        const result = await utils.apiRequest('/compare_datasets', {}, 'POST');
+        const result = await utils.apiRequest('/compare_datasets', { dataset_names: selectedDatasets }, 'POST');
         
         if (result.status === 'success') {
-            displayComparisonResults(result.comparison_data);
+            displayComparisonResults(result);
             utils.showNotification('데이터셋 비교가 완료되었습니다.', 'success');
         } else {
             utils.showNotification(result.message, 'error');
@@ -373,13 +398,102 @@ async function showDatasetComparison() {
     }
 }
 
-function displayComparisonResults(comparisonData) {
-    const resultsDiv = document.getElementById('comparison_results');
-    resultsDiv.innerHTML = comparisonData.html;
-    resultsDiv.classList.remove('hidden');
+async function showDatasetSelectionModal(datasets) {
+    return new Promise((resolve) => {
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+        modal.innerHTML = `
+            <div class="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+                <h3 class="text-lg font-semibold mb-4">비교할 데이터셋 선택</h3>
+                <div class="space-y-2 mb-4" id="dataset-checkboxes">
+                    ${datasets.map(dataset => `
+                        <label class="flex items-center space-x-2">
+                            <input type="checkbox" value="${dataset.name}" class="dataset-checkbox">
+                            <span class="text-sm">${dataset.name} (${dataset.data_count}개 데이터)</span>
+                        </label>
+                    `).join('')}
+                </div>
+                <div class="flex justify-end space-x-2">
+                    <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">
+                        취소
+                    </button>
+                    <button onclick="window.confirmDatasetSelection()" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                        비교하기
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        window.confirmDatasetSelection = () => {
+            const checkboxes = modal.querySelectorAll('.dataset-checkbox:checked');
+            const selectedDatasets = Array.from(checkboxes).map(cb => cb.value);
+            modal.remove();
+            resolve(selectedDatasets);
+        };
+        
+        // 모달 외부 클릭 시 닫기
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+                resolve([]);
+            }
+        });
+    });
+}
+
+function displayComparisonResults(result) {
+    const targetDiv = document.getElementById('comparison_results');
+    if (!targetDiv) {
+        console.error('comparison_results 엘리먼트를 찾을 수 없습니다.');
+        return;
+    }
+    
+    // 비교 결과 HTML 생성
+    let html = `
+        <div class="comparison-results">
+            <h3 class="text-xl font-bold mb-4">📊 데이터셋 비교 결과</h3>
+            <div class="mb-6">
+                <div id="comparison_chart" style="width: 100%; height: 400px;"></div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    `;
+    
+    // 통계 요약 표시
+    if (result.stats_summary) {
+        Object.entries(result.stats_summary).forEach(([datasetName, stats]) => {
+            html += `
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <h4 class="font-semibold mb-2">${datasetName}</h4>
+                    <div class="space-y-1 text-sm">
+                        <div>데이터 수: ${stats.count}개</div>
+                        <div>Size(nm) 평균: ${stats.size_mean.toFixed(3)}</div>
+                        <div>Size(nm) 표준편차: ${stats.size_std.toFixed(3)}</div>
+                        <div>PI 평균: ${stats.pi_mean.toFixed(3)}</div>
+                        <div>PI 표준편차: ${stats.pi_std.toFixed(3)}</div>
+                    </div>
+                </div>
+            `;
+        });
+    }
+    
+    html += `
+            </div>
+        </div>
+    `;
+    
+    targetDiv.innerHTML = html;
+    targetDiv.classList.remove('hidden');
+    
+    // 차트 렌더링
+    if (result.comparison_plot) {
+        const plotData = JSON.parse(result.comparison_plot);
+        Plotly.newPlot('comparison_chart', plotData.data, plotData.layout, {responsive: true});
+    }
     
     // 스크롤하여 결과 보기
-    resultsDiv.scrollIntoView({ behavior: 'smooth' });
+    targetDiv.scrollIntoView({ behavior: 'smooth' });
 }
 
 // 사용자 정의 데이터 상관관계 분석
@@ -559,6 +673,7 @@ function disableDarkMode() {
 window.saveDataset = saveDataset;
 window.loadDataset = loadDataset;
 window.deleteDataset = deleteDataset;
+window.showDatasetComparison = showDatasetComparison;
 window.showHelpModal = showHelpModal;
 window.refreshPage = refreshPage;
 window.showCustomDataCorrelation = showCustomDataCorrelation;

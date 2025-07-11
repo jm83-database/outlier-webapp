@@ -1,5 +1,6 @@
 import os
 from flask import Flask, render_template, request, session, jsonify, make_response
+from flask_session import Session
 import pandas as pd
 import numpy as np
 import json
@@ -19,6 +20,17 @@ import tempfile
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+
+# Session configuration for persistence
+app.config['SESSION_PERMANENT'] = False
+app.config['SESSION_TYPE'] = 'filesystem'
+app.config['SESSION_COOKIE_SECURE'] = False  # Set to True in production with HTTPS
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['PERMANENT_SESSION_LIFETIME'] = 7200  # 2 hours
+
+# Initialize Flask-Session
+Session(app)
 
 # Static files configuration for better caching
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 31536000  # 1 year for static files
@@ -144,6 +156,7 @@ def after_request(response):
 def index():
     if 'datasets' not in session:
         session['datasets'] = {}
+        session.modified = True
     
     if 'current_dataset' not in session:
         default_rows = 10
@@ -158,6 +171,7 @@ def index():
             },
             'pass_averages': []  # 패스별 평균값 저장
         }
+        session.modified = True
     
     clean_table_data = clean_data_for_json(session['current_dataset']['table_data'])
     return render_template('index.html',
@@ -208,6 +222,7 @@ def update_data():
             'pass_averages': current_dataset.get('pass_averages', []),
             'custom_data_field_name': current_dataset.get('custom_data_field_name', '사용자 입력 필드(레퍼런스)')
         }
+        session.modified = True
         
         return jsonify({'status': 'success'})
     except Exception as e:
@@ -224,6 +239,7 @@ def add_row():
         table_data['PI'].append(None)
         
         session['current_dataset']['table_data'] = table_data
+        session.modified = True
         clean_table_data = clean_data_for_json(table_data)
         
         return jsonify({'status': 'success', 'table_data': clean_table_data})
@@ -249,6 +265,7 @@ def add_column():
         table_data[column_name] = [None] * row_count
         
         session['current_dataset']['table_data'] = table_data
+        session.modified = True
         clean_table_data = clean_data_for_json(table_data)
         
         return jsonify({'status': 'success', 'table_data': clean_table_data})
@@ -391,6 +408,7 @@ def save_dataset():
         save_data['saved_at'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         
         session['datasets'][dataset_name] = save_data
+        session.modified = True
         
         return jsonify({'status': 'success', 'message': f'데이터셋 "{dataset_name}"이 저장되었습니다.'})
     except Exception as e:
@@ -408,6 +426,7 @@ def load_dataset():
         # 불러온 데이터셋을 현재 세션에 설정
         loaded_dataset = session['datasets'][dataset_name].copy()
         session['current_dataset'] = loaded_dataset
+        session.modified = True
         
         clean_table_data = clean_data_for_json(session['current_dataset']['table_data'])
         
@@ -464,6 +483,7 @@ def delete_dataset():
         
         del datasets[dataset_name]
         session['datasets'] = datasets
+        session.modified = True  # Explicitly mark session as modified for persistence
         
         return jsonify({
             'status': 'success',
@@ -575,10 +595,18 @@ def upload_file():
                         lines = file_content.split('\n')
                         data_start_line = 0
                         
-                        # 메타데이터 추출
+                        # 메타데이터 추출 및 데이터 시작점 찾기
+                        in_data_section = False
                         for i, line in enumerate(lines):
                             line = line.strip()
-                            if ',' in line and not line.startswith('No.'):
+                            
+                            # combined_data_outliers 파일의 특별한 구조 처리
+                            if '=== 데이터 + 이상치 분석 결과 ===' in line:
+                                in_data_section = True
+                                continue
+                            
+                            # 메타데이터 추출 (데이터 섹션 이전에만)
+                            if not in_data_section and ',' in line and not line.startswith('No.'):
                                 parts = line.split(',', 1)
                                 if len(parts) == 2:
                                     key = parts[0].strip()
@@ -633,10 +661,12 @@ def upload_file():
                 else:
                     table_data['PI'] = [None] * len(df)
                 
-                # 기타 숫자 컬럼들 추가
+                # 기타 컬럼들 추가 (숫자 및 이상치 컬럼 포함)
                 for col in df.columns:
-                    if col not in size_cols + pi_cols and pd.api.types.is_numeric_dtype(df[col]):
-                        table_data[col] = df[col].fillna('').tolist()
+                    if col not in size_cols + pi_cols and col != 'No.':
+                        # 숫자 컬럼 또는 이상치 관련 컬럼 추가
+                        if pd.api.types.is_numeric_dtype(df[col]) or '_이상치' in col:
+                            table_data[col] = df[col].fillna('').tolist()
                 
                 # 세션 데이터 업데이트 (메타데이터 포함)
                 current_dataset = session.get('current_dataset', {})
@@ -657,6 +687,12 @@ def upload_file():
                 
                 # 응답 메시지 생성
                 message = f'파일이 성공적으로 업로드되었습니다. ({len(df)}행)'
+                
+                # combined_data_outliers 파일인지 확인
+                outlier_cols = [col for col in df.columns if '_이상치' in col]
+                if outlier_cols:
+                    message += f' 이상치 분석 결과 파일이 감지되었습니다. ({len(outlier_cols)}개 이상치 컬럼 포함)'
+                
                 if metadata:
                     metadata_info = []
                     if 'sample_name' in metadata:
@@ -679,7 +715,8 @@ def upload_file():
                     'pass_count': current_dataset.get('pass_count', 1),
                     'columns_mapped': {
                         'Size(nm)': size_cols[0] if size_cols else None,
-                        'PI': pi_cols[0] if pi_cols else None
+                        'PI': pi_cols[0] if pi_cols else None,
+                        'outlier_columns': outlier_cols
                     }
                 })
                 

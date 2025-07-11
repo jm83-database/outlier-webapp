@@ -111,71 +111,6 @@
         </div>
     </div>
 
-    <!-- Dataset Management Section -->
-    <div class="glass-card rounded-2xl shadow-xl p-8 mb-8 border border-white/20">
-        <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
-            <div class="w-8 h-8 bg-gradient-to-r from-green-500 to-blue-600 rounded-lg flex items-center justify-center">
-                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-                </svg>
-            </div>
-            데이터셋 관리
-        </h2>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- 데이터셋 저장 -->
-            <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl border border-blue-200">
-                <h3 class="text-lg font-semibold text-blue-800 mb-4">💾 데이터셋 저장</h3>
-                <div class="space-y-4">
-                    <input type="text" id="dataset_name" placeholder="데이터셋 이름을 입력하세요" 
-                           class="enhanced-input w-full px-4 py-2 border-2 border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200">
-                    <button onclick="saveDataset()" 
-                            class="btn-enhanced w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-4 py-2 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-300">
-                        현재 데이터셋 저장
-                    </button>
-                </div>
-            </div>
-            
-            <!-- 데이터셋 불러오기 -->
-            <div class="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-xl border border-green-200">
-                <h3 class="text-lg font-semibold text-green-800 mb-4">📂 데이터셋 불러오기</h3>
-                <div class="space-y-4">
-                    <select id="saved_datasets" 
-                            class="enhanced-input w-full px-4 py-2 border-2 border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200">
-                        <option value="">저장된 데이터셋 선택</option>
-                    </select>
-                    <div class="flex gap-2">
-                        <button onclick="loadDataset()" 
-                                class="btn-enhanced flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-4 py-2 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-300">
-                            불러오기
-                        </button>
-                        <button onclick="deleteDataset()" 
-                                class="btn-enhanced bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-4 py-2 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-300">
-                            삭제
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- 데이터셋 비교 -->
-        <div class="mt-6 bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-xl border border-purple-200">
-            <h3 class="text-lg font-semibold text-purple-800 mb-4">📊 데이터셋 비교</h3>
-            <div class="flex flex-wrap gap-4">
-                <button onclick="showDatasetComparison()" 
-                        class="btn-enhanced bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white px-6 py-2 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-300 flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-                    </svg>
-                    데이터셋 비교 분석
-                </button>
-                <div id="saved_datasets_count" class="flex items-center text-sm text-gray-600">
-                    저장된 데이터셋: <span id="dataset_count">0</span>개
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Threshold Settings -->
     <div class="glass-card rounded-2xl shadow-xl p-8 mb-8 border border-white/20">
         <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
@@ -254,6 +189,74 @@
 
     <!-- Results Section -->
     <div id="results" class="space-y-6 fade-in"></div>
+
+    <!-- Dataset Management Section -->
+    <div class="glass-card rounded-2xl shadow-xl p-8 mb-8 border border-white/20">
+        <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
+            <div class="w-8 h-8 bg-gradient-to-r from-green-500 to-blue-600 rounded-lg flex items-center justify-center">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                </svg>
+            </div>
+            데이터셋 관리
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- 데이터셋 저장 -->
+            <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl border border-blue-200">
+                <h3 class="text-lg font-semibold text-blue-800 mb-4">💾 데이터셋 저장</h3>
+                <div class="space-y-4">
+                    <input type="text" id="dataset_name" placeholder="데이터셋 이름을 입력하세요" 
+                           class="enhanced-input w-full px-4 py-2 border-2 border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200">
+                    <button onclick="saveDataset()" 
+                            class="btn-enhanced w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-4 py-2 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-300">
+                        현재 데이터셋 저장
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 데이터셋 불러오기 -->
+            <div class="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-xl border border-green-200">
+                <h3 class="text-lg font-semibold text-green-800 mb-4">📂 데이터셋 불러오기</h3>
+                <div class="space-y-4">
+                    <select id="saved_datasets" 
+                            class="enhanced-input w-full px-4 py-2 border-2 border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200">
+                        <option value="">저장된 데이터셋 선택</option>
+                    </select>
+                    <div class="flex gap-2">
+                        <button onclick="loadDataset()" 
+                                class="btn-enhanced flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-4 py-2 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-300">
+                            불러오기
+                        </button>
+                        <button onclick="deleteDataset()" 
+                                class="btn-enhanced bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-4 py-2 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-300">
+                            삭제
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 데이터셋 비교 -->
+        <div class="mt-6 bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-xl border border-purple-200">
+            <h3 class="text-lg font-semibold text-purple-800 mb-4">📊 데이터셋 비교</h3>
+            <div class="flex flex-wrap gap-4">
+                <button onclick="showDatasetComparison()" 
+                        class="btn-enhanced bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white px-6 py-2 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-300 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                    </svg>
+                    데이터셋 비교 분석
+                </button>
+                <div id="saved_datasets_count" class="flex items-center text-sm text-gray-600">
+                    저장된 데이터셋: <span id="dataset_count">0</span>개
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dataset Comparison Results Section -->
+    <div id="comparison_results" class="hidden glass-card rounded-2xl shadow-xl p-8 mb-8 border border-white/20"></div>
 
     <!-- Pass Management Section -->
     <div class="glass-card rounded-2xl shadow-xl p-8 mb-8 border border-white/20">
