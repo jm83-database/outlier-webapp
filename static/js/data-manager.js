@@ -178,7 +178,7 @@ class DataManager {
             const realCol = columnMap[column.toLowerCase()];
             if (realCol) {
                 // 항상 "Size(nm)"로 표기
-                const displayName = realCol.toLowerCase() === 'size(nm)' ? 'Size(nm)' : realCol;
+                const displayName = realCol.toLowerCase() === 'size(nm)' || realCol.toLowerCase() === 'size(nm)' ? 'Size(nm)' : realCol;
                 thead.innerHTML += `<th class="px-4 py-2 text-center font-medium text-gray-700 bg-gray-100">${displayName}</th>`;
             }
         });
@@ -188,7 +188,7 @@ class DataManager {
             .filter(column => !fixedColumns.map(c => c.toLowerCase()).includes(column.toLowerCase()))
             .forEach(column => {
                 // 항상 "Size(nm)"로 표기
-                const displayName = column.toLowerCase() === 'size(nm)' ? 'Size(nm)' : column;
+                const displayName = column.toLowerCase() === 'size(nm)' || column.toLowerCase() === 'size(nm)' ? 'Size(nm)' : column;
                 thead.innerHTML += `<th class="px-4 py-2 text-center font-medium text-gray-700 bg-gray-100">${displayName}</th>`;
             });
         
