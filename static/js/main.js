@@ -11,7 +11,8 @@ window.appState = {
         iqr: 1.5,
         mad: 3.5
     },
-    savedDatasets: []
+    savedDatasets: [],
+    darkMode: false
 };
 
 // 애플리케이션 초기화
@@ -40,6 +41,9 @@ async function initializeApplication() {
         
         // 6. 데이터셋 목록 로드
         await updateSavedDatasetsList();
+        
+        // 7. 다크모드 상태 복원
+        initializeDarkMode();
         
         window.appState.isInitialized = true;
         console.log('✅ 애플리케이션 초기화 완료');
@@ -470,6 +474,47 @@ function refreshPage() {
     }, 500);
 }
 
+// 다크모드 관련 함수들
+function initializeDarkMode() {
+    // 로컬 스토리지에서 다크모드 상태 복원
+    const savedDarkMode = localStorage.getItem('darkMode');
+    if (savedDarkMode === 'true') {
+        enableDarkMode();
+    }
+}
+
+function toggleDarkMode() {
+    if (window.appState.darkMode) {
+        disableDarkMode();
+    } else {
+        enableDarkMode();
+    }
+}
+
+function enableDarkMode() {
+    document.body.classList.add('dark-mode');
+    const toggleBtn = document.querySelector('.dark-mode-toggle');
+    if (toggleBtn) {
+        toggleBtn.classList.add('dark');
+    }
+    
+    window.appState.darkMode = true;
+    localStorage.setItem('darkMode', 'true');
+    console.log('🌙 다크모드 활성화');
+}
+
+function disableDarkMode() {
+    document.body.classList.remove('dark-mode');
+    const toggleBtn = document.querySelector('.dark-mode-toggle');
+    if (toggleBtn) {
+        toggleBtn.classList.remove('dark');
+    }
+    
+    window.appState.darkMode = false;
+    localStorage.setItem('darkMode', 'false');
+    console.log('☀️ 라이트모드 활성화');
+}
+
 // 전역 함수 등록 (기존 호환성)
 window.saveDataset = saveDataset;
 window.loadDataset = loadDataset;
@@ -477,6 +522,7 @@ window.showHelpModal = showHelpModal;
 window.refreshPage = refreshPage;
 window.showCustomDataCorrelation = showCustomDataCorrelation;
 window.updateCustomFieldName = updateCustomFieldName;
+window.toggleDarkMode = toggleDarkMode;
 
 // PassManager 함수들도 전역으로 등록
 window.addBothGroupsAverage = function() {
