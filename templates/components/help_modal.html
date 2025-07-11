@@ -90,7 +90,8 @@
                         <h5 class="font-medium mb-2">📈 데이터 다운로드</h5>
                         <ul class="list-disc list-inside space-y-1 text-muted-foreground">
                             <li><strong>테이블 다운로드:</strong> 클릭 한 번으로 즉시 CSV 다운로드</li>
-                            <li><strong>결과 다운로드:</strong> 이상치 제거 후 분석 결과</li>
+                            <li><strong>이상치 결과 다운로드:</strong> 이상치 제거 후 분석 결과만</li>
+                            <li><strong>🆕 데이터+이상치 결과 다운로드:</strong> 원본 데이터와 각 방법별 이상치 판정 결과 통합</li>
                             <li><strong>스마트 업로드:</strong> 어떤 형식이든 자동 파싱</li>
                             <li><strong>완벽한 호환:</strong> 다운로드 → 편집 → 업로드 무제한 반복</li>
                         </ul>
@@ -175,8 +176,26 @@
                         <p class="text-gray-600">인터랙티브 산점도로 데이터 분포 확인, 마우스 오버로 세부 정보 표시</p>
                     </div>
                     <div class="bg-indigo-100 border border-indigo-200 p-3 rounded-xl">
-                        <h5 class="font-medium mb-2 text-indigo-800">📁 결과 다운로드</h5>
-                        <p class="text-gray-600">"결과 다운로드" 버튼으로 CSV 파일 저장, 원본 데이터와 처리 결과 모두 포함</p>
+                        <h5 class="font-medium mb-2 text-indigo-800">📁 다운로드 옵션</h5>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex items-start gap-2">
+                                <span class="text-green-600 font-bold">🔍</span>
+                                <div>
+                                    <strong>이상치 결과 다운로드:</strong> 이상치 제거 후 정제된 데이터만 포함
+                                </div>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <span class="text-blue-600 font-bold">📊</span>
+                                <div>
+                                    <strong>데이터+이상치 결과 다운로드:</strong> 원본 데이터에 각 방법별 이상치 판정 결과 추가
+                                    <div class="text-xs text-gray-500 mt-1">
+                                        • 모든 원본 데이터 포함<br>
+                                        • Z-Score, IQR, MAD 각각의 이상치 여부 표시<br>
+                                        • 분석 요약 및 설명 포함
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -319,7 +338,9 @@
                         <li><strong>대조군 데이터 저장:</strong> 그룹 구분 "대조군" 선택 후 Size/PI/사용자 정의 필드값 입력</li>
                         <li><strong>상관관계 분석:</strong> "사용자 정의 필드 상관관계 분석"으로 실험군/대조군 구분 시각화 확인</li>
                         <li><strong>데이터 저장:</strong> "Sample_A_Pass1"로 저장</li>
-                        <li><strong>결과 다운로드:</strong> CSV 파일로 보고서 작성용 다운로드</li>
+                        <li><strong>결과 다운로드:</strong> 
+                            <br>• "이상치 결과 다운로드": 정제된 데이터만
+                            <br>• "데이터+이상치 결과 다운로드": 원본 데이터와 이상치 판정 결과</li>
                     </ol>
                 </div>
             </div>

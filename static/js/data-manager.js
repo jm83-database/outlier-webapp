@@ -283,6 +283,23 @@ class DataManager {
             
             if (result.status === 'success') {
                 this.renderTable(result.table_data);
+                
+                // 메타데이터가 있으면 UI 업데이트
+                if (result.metadata && Object.keys(result.metadata).length > 0) {
+                    if (result.sample_name !== undefined) {
+                        const sampleNameEl = document.getElementById('sample_name');
+                        if (sampleNameEl) sampleNameEl.value = result.sample_name;
+                    }
+                    if (result.production_date !== undefined) {
+                        const productionDateEl = document.getElementById('production_date');
+                        if (productionDateEl) productionDateEl.value = result.production_date;
+                    }
+                    if (result.pass_count !== undefined) {
+                        const passCountEl = document.getElementById('pass_count');
+                        if (passCountEl) passCountEl.value = result.pass_count;
+                    }
+                }
+                
                 utils.showNotification(result.message, 'success');
                 
                 if (result.columns_mapped) {
@@ -311,8 +328,8 @@ class DataManager {
             // 현재 테이블 데이터를 먼저 업데이트
             await this.updateData();
             
-            // 데이터만 다운로드 (스마트 업로드가 있으므로 단순하게)
-            const response = await fetch('/download_table_data?data_only=true');
+            // 메타데이터 포함 다운로드 (완전한 기록)
+            const response = await fetch('/download_table_data');
             
             if (response.ok) {
                 const blob = await response.blob();

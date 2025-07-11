@@ -38,6 +38,17 @@ class ChartHandler {
                 if (addFromResultBtn) {
                     addFromResultBtn.classList.remove('hidden');
                 }
+                
+                // 다운로드 버튼들 표시
+                const downloadBtn = document.getElementById('downloadBtn');
+                if (downloadBtn) {
+                    downloadBtn.classList.remove('hidden');
+                }
+                
+                const downloadCombinedBtn = document.getElementById('downloadCombinedBtn');
+                if (downloadCombinedBtn) {
+                    downloadCombinedBtn.classList.remove('hidden');
+                }
             } else {
                 utils.showNotification(result.message, 'error');
             }
@@ -166,6 +177,16 @@ class ChartHandler {
         window.location.href = '/download_csv';
     }
 
+    // 결합된 데이터 다운로드 (원본 데이터 + 이상치 결과)
+    downloadCombinedResults() {
+        if (!this.lastCalculationResult) {
+            utils.showNotification('다운로드할 결과가 없습니다. 먼저 계산을 실행해주세요.', 'error');
+            return;
+        }
+
+        window.location.href = '/download_combined_results';
+    }
+
     // 사용자 정의 데이터 상관관계 분석
     async showCustomDataCorrelation() {
         try {
@@ -247,4 +268,5 @@ window.chartHandler = new ChartHandler();
 // 전역 함수들 (기존 호환성 위해 유지)
 window.calculateWithThresholds = () => chartHandler.calculateWithThresholds();
 window.downloadCSV = () => chartHandler.downloadCSV();
+window.downloadCombinedResults = () => chartHandler.downloadCombinedResults();
 window.showCustomDataCorrelation = () => chartHandler.showCustomDataCorrelation();

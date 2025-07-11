@@ -62,6 +62,12 @@ function initializeUI() {
         downloadBtn.classList.add('hidden');
     }
     
+    // 결합된 다운로드 버튼 초기 상태
+    const downloadCombinedBtn = document.getElementById('downloadCombinedBtn');
+    if (downloadCombinedBtn) {
+        downloadCombinedBtn.classList.add('hidden');
+    }
+    
     // 계산 결과 추가 버튼 초기 상태
     const addFromResultBtn = document.getElementById('addFromResultBtn');
     if (addFromResultBtn) {
@@ -237,12 +243,46 @@ async function loadDataset() {
         const result = await utils.apiRequest('/load_dataset', { dataset_name: datasetName }, 'POST');
         
         if (result.status === 'success') {
+            console.log('데이터셋 로드 결과:', result);
+            
             // UI 업데이트
-            document.getElementById('sample_name').value = result.sample_name;
-            document.getElementById('production_date').value = result.production_date;
-            document.getElementById('pass_count').value = result.pass_count;
+            const sampleNameEl = document.getElementById('sample_name');
+            const productionDateEl = document.getElementById('production_date');
+            const passCountEl = document.getElementById('pass_count');
+            
+            if (sampleNameEl) {
+                console.log('샘플명 업데이트 시도:', result.sample_name);
+                sampleNameEl.value = result.sample_name || '';
+                console.log('샘플명 입력 필드 값:', sampleNameEl.value);
+            }
+            if (productionDateEl) {
+                productionDateEl.value = result.production_date || '';
+            }
+            if (passCountEl) {
+                passCountEl.value = result.pass_count || 1;
+            }
+            
+            // 사용자 정의 필드명 업데이트
+            if (result.custom_data_field_name) {
+                const customFieldNameEl = document.getElementById('custom_field_name');
+                if (customFieldNameEl) {
+                    customFieldNameEl.value = result.custom_data_field_name;
+                    // PassManager에서 라벨 업데이트
+                    if (window.passManager) {
+                        window.passManager.updateCustomFieldLabels(result.custom_data_field_name);
+                    }
+                }
+            }
             
             dataManager.renderTable(result.table_data);
+            
+            // UI 업데이트 완료 후 입력 이벤트 트리거하여 데이터 동기화
+            setTimeout(() => {
+                if (sampleNameEl) {
+                    sampleNameEl.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            }, 100);
+            
             utils.showNotification('데이터셋이 성공적으로 불러와졌습니다.', 'success');
         } else {
             utils.showNotification(result.message, 'error');

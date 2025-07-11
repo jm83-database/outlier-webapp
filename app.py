@@ -205,7 +205,8 @@ def update_data():
             'production_date': production_date,
             'pass_count': pass_count,
             'table_data': table_data,
-            'pass_averages': current_dataset.get('pass_averages', [])
+            'pass_averages': current_dataset.get('pass_averages', []),
+            'custom_data_field_name': current_dataset.get('custom_data_field_name', '사용자 입력 필드(레퍼런스)')
         }
         
         return jsonify({'status': 'success'})
@@ -404,16 +405,19 @@ def load_dataset():
         if dataset_name not in session.get('datasets', {}):
             return jsonify({'status': 'error', 'message': '존재하지 않는 데이터셋입니다.'})
         
-        session['current_dataset'] = session['datasets'][dataset_name].copy()
+        # 불러온 데이터셋을 현재 세션에 설정
+        loaded_dataset = session['datasets'][dataset_name].copy()
+        session['current_dataset'] = loaded_dataset
         
         clean_table_data = clean_data_for_json(session['current_dataset']['table_data'])
         
         return jsonify({
             'status': 'success',
             'table_data': clean_table_data,
-            'sample_name': session['current_dataset'].get('sample_name', ''),
-            'production_date': session['current_dataset'].get('production_date', ''),
-            'pass_count': session['current_dataset'].get('pass_count', 1)
+            'sample_name': loaded_dataset.get('sample_name', ''),
+            'production_date': loaded_dataset.get('production_date', ''),
+            'pass_count': loaded_dataset.get('pass_count', 1),
+            'custom_data_field_name': loaded_dataset.get('custom_data_field_name', '사용자 입력 필드(레퍼런스)')
         })
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)})
@@ -559,19 +563,39 @@ def upload_file():
             filename = secure_filename(file.filename)
             
             try:
-                # 파일 읽기
+                # 파일 읽기 및 메타데이터 추출
+                metadata = {}
                 if filename.endswith('.csv'):
-                    # CSV 파일을 읽을 때 메타데이터 부분 건너뛰기
+                    # CSV 파일을 읽을 때 메타데이터 추출 및 데이터 부분 분리
                     try:
-                        # 먼저 전체 파일을 읽어서 데이터 시작점 찾기
+                        # 먼저 전체 파일을 읽어서 메타데이터와 데이터 시작점 찾기
                         file_content = file.read().decode('utf-8')
                         file.seek(0)  # 파일 포인터 리셋
                         
                         lines = file_content.split('\n')
                         data_start_line = 0
                         
-                        # 데이터 시작점 찾기 (No. 컬럼이 있는 행)
+                        # 메타데이터 추출
                         for i, line in enumerate(lines):
+                            line = line.strip()
+                            if ',' in line and not line.startswith('No.'):
+                                parts = line.split(',', 1)
+                                if len(parts) == 2:
+                                    key = parts[0].strip()
+                                    value = parts[1].strip()
+                                    
+                                    # 키-값 매핑
+                                    if key in ['샘플명', 'sample_name', 'Sample Name']:
+                                        metadata['sample_name'] = value
+                                    elif key in ['생산일자', 'production_date', 'Production Date']:
+                                        metadata['production_date'] = value
+                                    elif key in ['패스', 'pass', 'Pass', '패스 수', 'pass_count']:
+                                        try:
+                                            metadata['pass_count'] = int(value)
+                                        except ValueError:
+                                            metadata['pass_count'] = 1
+                            
+                            # 데이터 시작점 찾기 (No. 컬럼이 있는 행)
                             if 'No.' in line and ('Size(nm)' in line or 'size(nm)' in line):
                                 data_start_line = i
                                 break
@@ -614,13 +638,45 @@ def upload_file():
                     if col not in size_cols + pi_cols and pd.api.types.is_numeric_dtype(df[col]):
                         table_data[col] = df[col].fillna('').tolist()
                 
-                session['current_dataset']['table_data'] = table_data
+                # 세션 데이터 업데이트 (메타데이터 포함)
+                current_dataset = session.get('current_dataset', {})
+                
+                # 메타데이터가 있으면 기존 정보 업데이트
+                if metadata:
+                    if 'sample_name' in metadata:
+                        current_dataset['sample_name'] = metadata['sample_name']
+                    if 'production_date' in metadata:
+                        current_dataset['production_date'] = metadata['production_date']
+                    if 'pass_count' in metadata:
+                        current_dataset['pass_count'] = metadata['pass_count']
+                
+                current_dataset['table_data'] = table_data
+                session['current_dataset'] = current_dataset
+                
                 clean_table_data = clean_data_for_json(table_data)
+                
+                # 응답 메시지 생성
+                message = f'파일이 성공적으로 업로드되었습니다. ({len(df)}행)'
+                if metadata:
+                    metadata_info = []
+                    if 'sample_name' in metadata:
+                        metadata_info.append(f"샘플명: {metadata['sample_name']}")
+                    if 'production_date' in metadata:
+                        metadata_info.append(f"생산일자: {metadata['production_date']}")
+                    if 'pass_count' in metadata:
+                        metadata_info.append(f"패스: {metadata['pass_count']}")
+                    
+                    if metadata_info:
+                        message += f' 메타데이터도 자동 업데이트되었습니다. ({", ".join(metadata_info)})'
                 
                 return jsonify({
                     'status': 'success',
                     'table_data': clean_table_data,
-                    'message': f'파일이 성공적으로 업로드되었습니다. ({len(df)}행)',
+                    'message': message,
+                    'metadata': metadata,  # 추출된 메타데이터 정보
+                    'sample_name': current_dataset.get('sample_name', ''),
+                    'production_date': current_dataset.get('production_date', ''),
+                    'pass_count': current_dataset.get('pass_count', 1),
                     'columns_mapped': {
                         'Size(nm)': size_cols[0] if size_cols else None,
                         'PI': pi_cols[0] if pi_cols else None
@@ -1390,6 +1446,160 @@ def download_csv():
         
         import urllib.parse
         filename = f"outlier_results_{sample_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        encoded_filename = urllib.parse.quote(filename.encode('utf-8'))
+        
+        response.headers['Content-Disposition'] = f"attachment; filename*=UTF-8''{encoded_filename}"
+        
+        return response
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
+@app.route('/download_combined_results')
+def download_combined_results():
+    """원본 데이터와 이상치 계산 결과를 결합하여 다운로드"""
+    try:
+        # 현재 데이터 테이블 가져오기
+        current_dataset = session.get('current_dataset', {})
+        table_data = current_dataset.get('table_data', {})
+        
+        # 이상치 계산 결과 가져오기
+        results = session.get('last_results')
+        
+        if not table_data:
+            return jsonify({'status': 'error', 'message': '데이터 테이블이 없습니다.'})
+        
+        if not results:
+            return jsonify({'status': 'error', 'message': '이상치 계산 결과가 없습니다. 먼저 계산을 실행하세요.'})
+        
+        # 메타데이터 추출
+        sample_name = current_dataset.get('sample_name', '샘플')
+        production_date = current_dataset.get('production_date', '')
+        pass_count = current_dataset.get('pass_count', 1)
+        
+        # 원본 데이터 테이블 처리
+        original_df = pd.DataFrame(table_data)
+        
+        # 유효한 데이터만 추출 (빈 행 제거)
+        valid_rows = []
+        for i in range(len(original_df)):
+            row_data = {}
+            has_data = False
+            
+            for col in original_df.columns:
+                if col == 'No.':
+                    row_data[col] = original_df.iloc[i][col]
+                else:
+                    value = original_df.iloc[i][col]
+                    if value is not None and value != '' and str(value).strip() != '':
+                        row_data[col] = value
+                        has_data = True
+                    else:
+                        row_data[col] = ''
+            
+            if has_data:
+                valid_rows.append(row_data)
+        
+        if not valid_rows:
+            return jsonify({'status': 'error', 'message': '유효한 데이터가 없습니다.'})
+        
+        # 결합된 데이터 생성
+        combined_data = []
+        
+        # 원본 데이터에 이상치 분석 결과 추가
+        original_data_dict = {row['No.']: row for row in valid_rows}
+        
+        # 이상치 계산 결과에서 각 데이터 포인트의 이상치 여부 확인
+        methods = ['zscore', 'iqr', 'mad']
+        method_names = {'zscore': 'Z-Score', 'iqr': 'IQR', 'mad': 'MAD'}
+        
+        # 계산 결과에서 원본 데이터 순서 유지
+        calc_original_data = results.get('original_data', [])
+        
+        for calc_row in calc_original_data:
+            # 원본 테이블에서 해당 행 찾기
+            original_row = None
+            for orig_row in valid_rows:
+                if (abs(float(orig_row.get('Size(nm)', 0) or 0) - calc_row.get('Size(nm)', 0)) < 0.001 and
+                    abs(float(orig_row.get('PI', 0) or 0) - calc_row.get('PI', 0)) < 0.001):
+                    original_row = orig_row.copy()
+                    break
+            
+            if original_row is None:
+                continue
+            
+            # 각 방법별 이상치 여부 추가
+            for method in methods:
+                method_result = results.get(method, {})
+                outliers = method_result.get('outliers', [])
+                
+                is_outlier = False
+                for outlier in outliers:
+                    if (abs(outlier.get('Size(nm)', 0) - calc_row.get('Size(nm)', 0)) < 0.001 and
+                        abs(outlier.get('PI', 0) - calc_row.get('PI', 0)) < 0.001):
+                        is_outlier = True
+                        break
+                
+                original_row[f'{method_names[method]}_이상치'] = '예' if is_outlier else '아니오'
+            
+            combined_data.append(original_row)
+        
+        # DataFrame 생성
+        combined_df = pd.DataFrame(combined_data)
+        
+        # 컬럼 순서 정렬
+        base_columns = ['No.', 'Size(nm)', 'PI']
+        outlier_columns = [f'{method_names[method]}_이상치' for method in methods]
+        other_columns = [col for col in combined_df.columns if col not in base_columns + outlier_columns]
+        
+        column_order = [col for col in base_columns if col in combined_df.columns] + other_columns + outlier_columns
+        combined_df = combined_df[column_order]
+        
+        # CSV 생성
+        csv_content = []
+        
+        # 메타데이터 추가
+        csv_content.append(f"샘플명,{sample_name}")
+        csv_content.append(f"생산일자,{production_date}")
+        csv_content.append(f"패스,{pass_count}")
+        csv_content.append(f"분석일시,{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        csv_content.append(f"총 데이터 수,{len(combined_df)}")
+        csv_content.append("")
+        
+        # 이상치 분석 요약
+        csv_content.append("=== 이상치 분석 요약 ===")
+        for method in methods:
+            method_result = results.get(method, {})
+            csv_content.append(f"{method_names[method]} 방법 (임계값: {method_result.get('threshold', 'N/A')})")
+            csv_content.append(f"  - 이상치 개수: {method_result.get('outliers_count', 0)}개")
+            csv_content.append(f"  - 정상 데이터 개수: {method_result.get('count', 0)}개")
+            csv_content.append(f"  - 처리 후 Size(nm) 평균: {method_result.get('size_mean', 0):.3f}")
+            csv_content.append(f"  - 처리 후 PI 평균: {method_result.get('pi_mean', 0):.3f}")
+        csv_content.append("")
+        
+        # 설명 추가
+        csv_content.append("=== 컬럼 설명 ===")
+        csv_content.append("No.: 데이터 순번")
+        csv_content.append("Size(nm): 입자 크기 (나노미터)")
+        csv_content.append("PI: 다분산 지수")
+        for method in methods:
+            csv_content.append(f"{method_names[method]}_이상치: {method_names[method]} 방법으로 판단한 이상치 여부 (예/아니오)")
+        csv_content.append("")
+        
+        # 결합된 데이터 추가
+        csv_content.append("=== 데이터 + 이상치 분석 결과 ===")
+        combined_csv = combined_df.to_csv(index=False, encoding='utf-8')
+        csv_content.append(combined_csv.strip())
+        
+        # 최종 CSV 생성
+        final_csv = '\n'.join(csv_content)
+        final_csv_bytes = '\ufeff' + final_csv  # BOM 추가
+        
+        response = make_response(final_csv_bytes.encode('utf-8'))
+        response.headers['Content-Type'] = 'text/csv; charset=utf-8'
+        
+        import urllib.parse
+        filename = f"combined_data_outliers_{sample_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
         encoded_filename = urllib.parse.quote(filename.encode('utf-8'))
         
         response.headers['Content-Disposition'] = f"attachment; filename*=UTF-8''{encoded_filename}"
