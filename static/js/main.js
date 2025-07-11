@@ -273,8 +273,8 @@ async function updateSavedDatasetsList() {
     // 새로운 옵션 추가
     datasets.forEach(dataset => {
         const option = document.createElement('option');
-        option.value = dataset;
-        option.textContent = dataset;
+        option.value = dataset.name || dataset;
+        option.textContent = dataset.name || dataset;
         selectElement.appendChild(option);
     });
     
@@ -518,6 +518,7 @@ function disableDarkMode() {
 // 전역 함수 등록 (기존 호환성)
 window.saveDataset = saveDataset;
 window.loadDataset = loadDataset;
+window.deleteDataset = deleteDataset;
 window.showHelpModal = showHelpModal;
 window.refreshPage = refreshPage;
 window.showCustomDataCorrelation = showCustomDataCorrelation;

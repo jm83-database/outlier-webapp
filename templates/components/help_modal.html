@@ -82,17 +82,29 @@
                         <ul class="list-disc list-inside space-y-1 text-muted-foreground">
                             <li>"데이터셋 저장"으로 현재 작업 저장</li>
                             <li>"데이터셋 불러오기"로 이전 작업 복원</li>
+                            <li>"데이터셋 삭제"로 불필요한 데이터 제거</li>
                             <li>여러 실험 데이터를 개별 관리</li>
                         </ul>
                     </div>
                     <div>
-                        <h5 class="font-medium mb-2">📈 비교 분석</h5>
+                        <h5 class="font-medium mb-2">📈 다운로드 옵션</h5>
                         <ul class="list-disc list-inside space-y-1 text-muted-foreground">
-                            <li>"데이터셋 비교"로 여러 실험 비교</li>
-                            <li>시각적 그래프로 차이점 확인</li>
-                            <li>통계 요약 테이블 제공</li>
+                            <li><strong>테이블 다운로드:</strong> 입력한 원시 데이터 CSV 다운로드</li>
+                            <li><strong>데이터만:</strong> 순수 데이터, 재업로드 호환</li>
+                            <li><strong>메타데이터 포함:</strong> 샘플명, 날짜 등 정보 포함</li>
+                            <li><strong>결과 다운로드:</strong> 이상치 제거 후 분석 결과</li>
                         </ul>
                     </div>
+                </div>
+                
+                <div class="mt-4 bg-yellow-100 border border-yellow-200 p-3 rounded-xl">
+                    <h5 class="font-medium mb-2 text-yellow-800">💡 다운로드-업로드 사이클</h5>
+                    <ol class="list-decimal list-inside space-y-1 text-sm text-yellow-700">
+                        <li><strong>테이블 다운로드:</strong> "데이터만 다운로드" 선택</li>
+                        <li><strong>데이터 편집:</strong> Excel에서 수정/추가</li>
+                        <li><strong>파일 업로드:</strong> 수정된 파일을 다시 업로드</li>
+                        <li><strong>자동 처리:</strong> 메타데이터 자동 제거하여 깔끔하게 로드</li>
+                    </ol>
                 </div>
             </div>
 

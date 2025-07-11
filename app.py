@@ -418,6 +418,57 @@ def load_dataset():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)})
 
+@app.route('/get_saved_datasets', methods=['GET'])
+def get_saved_datasets():
+    """저장된 데이터셋 목록을 반환"""
+    try:
+        datasets = session.get('datasets', {})
+        dataset_list = []
+        
+        for name, data in datasets.items():
+            dataset_info = {
+                'name': name,
+                'sample_name': data.get('sample_name', ''),
+                'production_date': data.get('production_date', ''),
+                'pass_count': data.get('pass_count', 1),
+                'saved_at': data.get('saved_at', ''),
+                'data_count': len(data.get('table_data', {}).get('No.', []))
+            }
+            dataset_list.append(dataset_info)
+        
+        return jsonify({
+            'status': 'success',
+            'datasets': dataset_list
+        })
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
+@app.route('/delete_dataset', methods=['POST'])
+def delete_dataset():
+    """데이터셋 삭제"""
+    try:
+        data = request.get_json()
+        dataset_name = data.get('dataset_name', '')
+        
+        if not dataset_name:
+            return jsonify({'status': 'error', 'message': '삭제할 데이터셋 이름이 필요합니다.'})
+        
+        datasets = session.get('datasets', {})
+        
+        if dataset_name not in datasets:
+            return jsonify({'status': 'error', 'message': '존재하지 않는 데이터셋입니다.'})
+        
+        del datasets[dataset_name]
+        session['datasets'] = datasets
+        
+        return jsonify({
+            'status': 'success',
+            'message': f'데이터셋 "{dataset_name}"이 삭제되었습니다.'
+        })
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
 @app.route('/compare_datasets', methods=['POST'])
 def compare_datasets():
     try:
@@ -510,7 +561,30 @@ def upload_file():
             try:
                 # 파일 읽기
                 if filename.endswith('.csv'):
-                    df = pd.read_csv(file)
+                    # CSV 파일을 읽을 때 메타데이터 부분 건너뛰기
+                    try:
+                        # 먼저 전체 파일을 읽어서 데이터 시작점 찾기
+                        file_content = file.read().decode('utf-8')
+                        file.seek(0)  # 파일 포인터 리셋
+                        
+                        lines = file_content.split('\n')
+                        data_start_line = 0
+                        
+                        # 데이터 시작점 찾기 (No. 컬럼이 있는 행)
+                        for i, line in enumerate(lines):
+                            if 'No.' in line and ('Size(nm)' in line or 'size(nm)' in line):
+                                data_start_line = i
+                                break
+                        
+                        if data_start_line > 0:
+                            # 메타데이터 부분을 건너뛰고 데이터 부분만 읽기
+                            df = pd.read_csv(file, skiprows=data_start_line)
+                        else:
+                            df = pd.read_csv(file)
+                    except Exception:
+                        # 일반적인 CSV 읽기로 fallback
+                        file.seek(0)
+                        df = pd.read_csv(file)
                 else:
                     df = pd.read_excel(file)
                 
@@ -1154,6 +1228,94 @@ def get_viscosity_correlation():
             },
             'data_count': len(viscosity_data)
         })
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
+@app.route('/download_table_data')
+def download_table_data():
+    """현재 데이터 테이블을 CSV로 다운로드"""
+    data_only = request.args.get('data_only', 'false').lower() == 'true'
+    try:
+        current_dataset = session.get('current_dataset', {})
+        table_data = current_dataset.get('table_data', {})
+        
+        if not table_data:
+            return jsonify({'status': 'error', 'message': '다운로드할 데이터가 없습니다.'})
+        
+        df = pd.DataFrame(table_data)
+        
+        # 유효한 데이터만 추출 (빈 행 제거)
+        valid_rows = []
+        for i in range(len(df)):
+            row_data = {}
+            has_data = False
+            
+            for col in df.columns:
+                if col == 'No.':
+                    row_data[col] = df.iloc[i][col]
+                else:
+                    value = df.iloc[i][col]
+                    if value is not None and value != '' and str(value).strip() != '':
+                        row_data[col] = value
+                        has_data = True
+                    else:
+                        row_data[col] = ''
+            
+            if has_data:  # 데이터가 있는 행만 포함
+                valid_rows.append(row_data)
+        
+        if not valid_rows:
+            return jsonify({'status': 'error', 'message': '유효한 데이터가 없습니다.'})
+        
+        # DataFrame 생성
+        df_valid = pd.DataFrame(valid_rows)
+        
+        # 컬럼 순서 정렬 (No., Size(nm), PI, 기타)
+        ordered_columns = ['No.', 'Size(nm)', 'PI']
+        all_columns = list(df_valid.columns)
+        other_columns = [col for col in all_columns if col not in ordered_columns]
+        column_order = [col for col in ordered_columns if col in all_columns] + other_columns
+        
+        df_valid = df_valid[column_order]
+        
+        # CSV 생성
+        sample_name = current_dataset.get('sample_name', 'Sample')
+        production_date = current_dataset.get('production_date', '')
+        pass_count = current_dataset.get('pass_count', 1)
+        
+        if data_only:
+            # 데이터만 다운로드 (메타데이터 없음)
+            final_csv = df_valid.to_csv(index=False, encoding='utf-8')
+        else:
+            # 메타데이터 포함 다운로드
+            csv_content = []
+            
+            # 메타데이터 추가 (컬럼 수 맞추기)
+            csv_content.append(f"샘플명,{sample_name if sample_name else 'Unknown'}")
+            csv_content.append(f"생산일자,{production_date if production_date else 'Unknown'}")
+            csv_content.append(f"패스,{pass_count}")
+            csv_content.append(f"다운로드일시,{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            csv_content.append(f"총 데이터 수,{len(df_valid)}")
+            csv_content.append("")
+            
+            # 데이터 추가
+            csv_data = df_valid.to_csv(index=False, encoding='utf-8')
+            csv_content.append(csv_data.strip())
+            
+            final_csv = '\n'.join(csv_content)
+        final_csv_bytes = '\ufeff' + final_csv  # BOM 추가
+        
+        response = make_response(final_csv_bytes.encode('utf-8'))
+        response.headers['Content-Type'] = 'text/csv; charset=utf-8'
+        
+        import urllib.parse
+        filename = f"table_data_{sample_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        encoded_filename = urllib.parse.quote(filename.encode('utf-8'))
+        
+        response.headers['Content-Disposition'] = f"attachment; filename*=UTF-8''{encoded_filename}"
+        
+        return response
         
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)})
