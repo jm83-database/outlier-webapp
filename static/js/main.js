@@ -68,10 +68,10 @@ function initializeUI() {
         downloadCombinedBtn.classList.add('hidden');
     }
     
-    // 계산 결과 추가 버튼 초기 상태
-    const addFromResultBtn = document.getElementById('addFromResultBtn');
-    if (addFromResultBtn) {
-        addFromResultBtn.classList.add('hidden');
+    // 계산 결과 추가 섹션 초기 상태
+    const addFromResultSection = document.getElementById('addFromResultSection');
+    if (addFromResultSection) {
+        addFromResultSection.classList.add('hidden');
     }
     
     // 결과 영역 초기화
@@ -574,11 +574,11 @@ function displayCustomDataCorrelation(data) {
             <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="bg-blue-50 p-4 rounded-xl">
                     <h3 class="font-semibold text-blue-800 mb-2">실험군 데이터 (${experimentalCount}개)</h3>
-                    <div class="text-sm text-gray-600">파란색 점으로 표시됨</div>
+                    <div class="text-sm text-gray-600">원형 점으로 표시됨</div>
                 </div>
                 <div class="bg-green-50 p-4 rounded-xl">
                     <h3 class="font-semibold text-green-800 mb-2">대조군 데이터 (${controlCount}개)</h3>
-                    <div class="text-sm text-gray-600">초록색 점으로 표시됨</div>
+                    <div class="text-sm text-gray-600">빨간색 마름모 마커로 표시됨</div>
                 </div>
             </div>
         </div>

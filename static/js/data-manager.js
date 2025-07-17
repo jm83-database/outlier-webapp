@@ -140,10 +140,10 @@ class DataManager {
                     resultsDiv.innerHTML = '';
                 }
                 
-                // 계산 결과 추가 버튼 숨기기
-                const addFromResultBtn = document.getElementById('addFromResultBtn');
-                if (addFromResultBtn) {
-                    addFromResultBtn.classList.add('hidden');
+                // 계산 결과 추가 섹션 숨기기
+                const addFromResultSection = document.getElementById('addFromResultSection');
+                if (addFromResultSection) {
+                    addFromResultSection.classList.add('hidden');
                 }
             } else {
                 utils.showNotification(result.message, 'error');

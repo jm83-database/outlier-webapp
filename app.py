@@ -138,7 +138,11 @@ def create_scatter_plot(data, title="Scatter Plot", outlier_info=None):
         hovermode='closest',
         width=600,
         height=400,
-        margin=dict(l=60, r=30, t=60, b=60)
+        margin=dict(l=60, r=30, t=60, b=60),
+        legend=dict(
+            itemsizing='constant',
+            font=dict(size=12)
+        )
     )
     
     return json.dumps(fig, cls=PlotlyJSONEncoder)
@@ -169,7 +173,8 @@ def index():
                 'Size(nm)': [None] * default_rows,
                 'PI': [None] * default_rows
             },
-            'pass_averages': []  # 패스별 평균값 저장
+            'pass_averages': [],  # 실험군 패스별 평균값 저장
+            'control_data': []  # 대조군 독립 저장
         }
         session.modified = True
     
@@ -180,7 +185,7 @@ def index():
                          production_date=session['current_dataset'].get('production_date', ''),
                          pass_count=session['current_dataset'].get('pass_count', 1),
                          saved_datasets=list(session['datasets'].keys()),
-                         custom_data_field_name=session['current_dataset'].get('custom_data_field_name', '사용자 입력 필드(레퍼런스)'))
+                         custom_data_field_name=session['current_dataset'].get('custom_data_field_name', '사용자 정의 필드'))
 
 @app.route('/health')
 def health():
@@ -220,7 +225,7 @@ def update_data():
             'pass_count': pass_count,
             'table_data': table_data,
             'pass_averages': current_dataset.get('pass_averages', []),
-            'custom_data_field_name': current_dataset.get('custom_data_field_name', '사용자 입력 필드(레퍼런스)')
+            'custom_data_field_name': current_dataset.get('custom_data_field_name', '사용자 정의 필드')
         }
         session.modified = True
         
@@ -285,7 +290,8 @@ def reset_data():
                 'Size(nm)': [None] * default_rows,
                 'PI': [None] * default_rows
             },
-            'pass_averages': []  # 패스별 평균값 저장
+            'pass_averages': [],  # 실험군 패스별 평균값 저장
+            'control_data': []  # 대조군 독립 저장
         }
         
         if 'last_results' in session:
@@ -728,6 +734,120 @@ def upload_file():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)})
 
+@app.route('/add_experimental_data', methods=['POST'])
+def add_experimental_data():
+    """실험군 데이터 추가 (샘플별 저장)"""
+    try:
+        data = request.get_json()
+        sample_name = data.get('sample_name')
+        production_date = data.get('production_date')
+        size_avg = data.get('size_avg')
+        pi_avg = data.get('pi_avg')
+        removal_method = data.get('removal_method', 'Manual')
+        threshold_used = data.get('threshold_used', 'N/A')
+        custom_data_name = data.get('custom_data_name', '사용자 정의 필드')
+        custom_data_value = data.get('custom_data_value')
+        
+        if not all([sample_name, size_avg is not None, pi_avg is not None]):
+            return jsonify({'status': 'error', 'message': '샘플명, Size 평균, PI 평균은 필수 입력 항목입니다.'})
+        
+        current_dataset = session.get('current_dataset', {})
+        if 'pass_averages' not in current_dataset:
+            current_dataset['pass_averages'] = []
+        
+        # 사용자 정의 필드명 저장
+        current_dataset['custom_data_field_name'] = custom_data_name
+        
+        # 중복 샘플명 체크 (실험군만)
+        existing_samples = [p['sample_name'] for p in current_dataset['pass_averages'] if p.get('group_type', 'experimental') == 'experimental']
+        if sample_name in existing_samples:
+            return jsonify({'status': 'error', 'message': f'실험군 샘플 "{sample_name}"이 이미 존재합니다.'})
+        
+        # 새 실험군 데이터 추가
+        new_sample = {
+            'sample_name': sample_name,
+            'production_date': production_date,
+            'group_type': 'experimental',
+            'size_avg': float(size_avg),
+            'pi_avg': float(pi_avg),
+            'removal_method': removal_method,
+            'threshold_used': threshold_used,
+            'custom_data_value': float(custom_data_value) if custom_data_value is not None and custom_data_value != '' else None,
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+        
+        current_dataset['pass_averages'].append(new_sample)
+        session['current_dataset'] = current_dataset
+        
+        return jsonify({
+            'status': 'success',
+            'message': f'실험군 샘플 "{sample_name}" 데이터가 추가되었습니다.',
+            'experimental_data': [p for p in current_dataset['pass_averages'] if p.get('group_type', 'experimental') == 'experimental'],
+            'custom_data_field_name': current_dataset.get('custom_data_field_name', '사용자 정의 필드')
+        })
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
+@app.route('/add_control_data', methods=['POST'])
+def add_control_data():
+    """대조군 데이터 추가 (독립 저장)"""
+    try:
+        data = request.get_json()
+        sample_name = data.get('sample_name')
+        size_avg = data.get('size_avg')
+        pi_avg = data.get('pi_avg')
+        custom_data_name = data.get('custom_data_name', '사용자 정의 필드')
+        custom_data_value = data.get('custom_data_value')
+        
+        if not all([sample_name, size_avg is not None, pi_avg is not None]):
+            return jsonify({'status': 'error', 'message': '샘플명, Size 평균, PI 평균은 필수 입력 항목입니다.'})
+        
+        current_dataset = session.get('current_dataset', {})
+        if 'control_data' not in current_dataset:
+            current_dataset['control_data'] = []
+        
+        # 사용자 정의 필드명 저장
+        current_dataset['custom_data_field_name'] = custom_data_name
+        
+        # 중복 샘플명 체크
+        existing_samples = [c['sample_name'] for c in current_dataset['control_data']]
+        if sample_name in existing_samples:
+            return jsonify({'status': 'error', 'message': f'대조군 샘플 "{sample_name}"이 이미 존재합니다.'})
+        
+        # 새 대조군 데이터 추가 (레퍼런스이므로 생산일자 불필요)
+        new_control = {
+            'sample_name': sample_name,
+            'group_type': 'control',
+            'size_avg': float(size_avg),
+            'pi_avg': float(pi_avg),
+            'removal_method': 'Manual',
+            'threshold_used': 'N/A',
+            'custom_data_value': float(custom_data_value) if custom_data_value is not None and custom_data_value != '' else None,
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+        
+        # control_data와 pass_averages 모두에 추가 (호환성)
+        current_dataset['control_data'].append(new_control)
+        
+        # pass_averages에도 추가하여 트렌드 분석에 포함
+        if 'pass_averages' not in current_dataset:
+            current_dataset['pass_averages'] = []
+        current_dataset['pass_averages'].append(new_control)
+        
+        session['current_dataset'] = current_dataset
+        session.modified = True
+        
+        return jsonify({
+            'status': 'success',
+            'message': f'대조군 샘플 "{sample_name}" 데이터가 추가되었습니다.',
+            'control_data': current_dataset['control_data'],
+            'custom_data_field_name': current_dataset.get('custom_data_field_name', '사용자 정의 필드')
+        })
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
 @app.route('/add_pass_average', methods=['POST'])
 def add_pass_average():
     try:
@@ -738,7 +858,7 @@ def add_pass_average():
         pi_avg = data.get('pi_avg')
         removal_method = data.get('removal_method', '')
         threshold_used = data.get('threshold_used', '')
-        custom_data_name = data.get('custom_data_name', '사용자 입력 필드(레퍼런스)')  # 사용자 정의 필드명
+        custom_data_name = data.get('custom_data_name', '사용자 정의 필드')  # 사용자 정의 필드명
         custom_data_value = data.get('custom_data_value')  # 사용자 정의 데이터 값
         
         if not all([pass_number, size_avg is not None, pi_avg is not None]):
@@ -789,7 +909,7 @@ def add_both_groups_pass_average():
     try:
         data = request.get_json()
         pass_number = data.get('pass_number')
-        custom_data_name = data.get('custom_data_name', '사용자 입력 필드(레퍼런스)')
+        custom_data_name = data.get('custom_data_name', '사용자 정의 필드')
         
         # 실험군 데이터
         exp_data = data.get('experimental', {})
@@ -874,37 +994,85 @@ def add_both_groups_pass_average():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)})
 
+@app.route('/delete_control_data', methods=['POST'])
+def delete_control_data():
+    """대조군 데이터 삭제"""
+    try:
+        data = request.get_json()
+        sample_name = data.get('sample_name')
+        
+        if not sample_name:
+            return jsonify({'status': 'error', 'message': '샘플명이 필요합니다.'})
+        
+        current_dataset = session.get('current_dataset', {})
+        if 'control_data' not in current_dataset:
+            return jsonify({'status': 'error', 'message': '삭제할 대조군 데이터가 없습니다.'})
+        
+        # control_data에서 삭제
+        original_length = len(current_dataset['control_data'])
+        current_dataset['control_data'] = [
+            c for c in current_dataset['control_data'] 
+            if c['sample_name'] != sample_name
+        ]
+        
+        # pass_averages에서도 삭제 (대조군)
+        if 'pass_averages' in current_dataset:
+            current_dataset['pass_averages'] = [
+                p for p in current_dataset['pass_averages']
+                if not (p.get('sample_name') == sample_name and p.get('group_type') == 'control')
+            ]
+        
+        if len(current_dataset['control_data']) == original_length:
+            return jsonify({'status': 'error', 'message': f'대조군 샘플 "{sample_name}"을 찾을 수 없습니다.'})
+        
+        session['current_dataset'] = current_dataset
+        session.modified = True
+        
+        return jsonify({
+            'status': 'success',
+            'message': f'대조군 샘플 "{sample_name}"이 삭제되었습니다.',
+            'control_data': current_dataset['control_data']
+        })
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
 @app.route('/delete_pass_average', methods=['POST'])
 def delete_pass_average():
     try:
         data = request.get_json()
-        pass_number = data.get('pass_number')
+        # pass_number 또는 sample_name 둘 다 지원 (호환성)
+        identifier = data.get('pass_number') or data.get('sample_name')
         group_type = data.get('group_type', 'experimental')  # 그룹 타입 추가
         
-        if pass_number is None:
-            return jsonify({'status': 'error', 'message': '패스 번호가 필요합니다.'})
+        if identifier is None:
+            return jsonify({'status': 'error', 'message': '삭제할 데이터 식별자가 필요합니다.'})
         
         current_dataset = session.get('current_dataset', {})
         if 'pass_averages' not in current_dataset:
-            return jsonify({'status': 'error', 'message': '삭제할 패스 데이터가 없습니다.'})
+            return jsonify({'status': 'error', 'message': '삭제할 데이터가 없습니다.'})
         
-        # 해당 패스 번호 및 그룹 타입 삭제
+        # 해당 샘플명 또는 패스 번호로 삭제
         original_length = len(current_dataset['pass_averages'])
         current_dataset['pass_averages'] = [
             p for p in current_dataset['pass_averages'] 
-            if not (p['pass_number'] == int(pass_number) and p.get('group_type', 'experimental') == group_type)
+            if not (
+                (p.get('sample_name') == str(identifier) or p.get('pass_number') == identifier) and 
+                p.get('group_type', 'experimental') == group_type
+            )
         ]
         
         if len(current_dataset['pass_averages']) == original_length:
             group_name = '실험군' if group_type == 'experimental' else '대조군'
-            return jsonify({'status': 'error', 'message': f'패스 {pass_number} {group_name}을 찾을 수 없습니다.'})
+            return jsonify({'status': 'error', 'message': f'{group_name} 샘플 "{identifier}"을 찾을 수 없습니다.'})
         
         session['current_dataset'] = current_dataset
+        session.modified = True
         
         group_name = '실험군' if group_type == 'experimental' else '대조군'
         return jsonify({
             'status': 'success',
-            'message': f'패스 {pass_number} {group_name}이 삭제되었습니다.',
+            'message': f'{group_name} 샘플 "{identifier}"이 삭제되었습니다.',
             'pass_averages': current_dataset['pass_averages']
         })
         
@@ -918,96 +1086,211 @@ def get_pass_trend_data():
         pass_averages = current_dataset.get('pass_averages', [])
         
         if not pass_averages:
-            return jsonify({'status': 'error', 'message': '패스 데이터가 없습니다.'})
+            return jsonify({'status': 'error', 'message': '실험군/대조군 데이터가 없습니다.'})
         
-        # 패스 번호 순으로 정렬
-        sorted_passes = sorted(pass_averages, key=lambda x: x['pass_number'])
+        # 실험군과 대조군 데이터 분리
+        experimental_data = [p for p in pass_averages if p.get('group_type', 'experimental') == 'experimental']
+        control_data = [p for p in pass_averages if p.get('group_type') == 'control']
         
-        # 트렌드 차트용 데이터 준비
-        pass_numbers = [p['pass_number'] for p in sorted_passes]
-        size_avgs = [p['size_avg'] for p in sorted_passes]
-        pi_avgs = [p['pi_avg'] for p in sorted_passes]
+        # 생산일자별로 정렬 (생산일자가 없으면 샘플명으로 정렬)
+        def sort_key(x):
+            production_date = x.get('production_date')
+            if production_date:
+                return (production_date, x.get('sample_name', ''))
+            else:
+                return ('9999-12-31', x.get('sample_name', ''))  # 날짜가 없으면 마지막에 배치
+        
+        sorted_exp = sorted(experimental_data, key=sort_key)
+        sorted_ctrl = sorted(control_data, key=sort_key)
+        
+        # 트렌드 차트용 데이터 준비 (실험군)
+        exp_sample_names = [p['sample_name'] for p in sorted_exp]
+        exp_production_dates = [p.get('production_date', '') for p in sorted_exp]
+        exp_size_avgs = [p['size_avg'] for p in sorted_exp]
+        exp_pi_avgs = [p['pi_avg'] for p in sorted_exp]
+        
+        # 대조군 데이터
+        ctrl_sample_names = [p['sample_name'] for p in sorted_ctrl]
+        ctrl_production_dates = [p.get('production_date', '') for p in sorted_ctrl]
+        ctrl_size_avgs = [p['size_avg'] for p in sorted_ctrl]
+        ctrl_pi_avgs = [p['pi_avg'] for p in sorted_ctrl]
         
         # Plotly 차트 데이터 생성
         fig_size = go.Figure()
-        fig_size.add_trace(go.Scatter(
-            x=pass_numbers,
-            y=size_avgs,
-            mode='lines+markers',
-            name='Size(nm) 평균',
-            line=dict(color='blue', width=3),
-            marker=dict(size=8)
-        ))
+        
+        # 실험군 데이터 추가
+        if sorted_exp:
+            exp_hover_text = [f"샘플명: {name}<br>생산일자: {date if date else '미지정'}<br>Size(nm): {size:.3f}" 
+                             for name, date, size in zip(exp_sample_names, exp_production_dates, exp_size_avgs)]
+            fig_size.add_trace(go.Scatter(
+                x=list(range(1, len(exp_sample_names) + 1)),
+                y=exp_size_avgs,
+                mode='lines+markers',
+                name='실험군 Size(nm)',
+                line=dict(color='blue', width=3),
+                marker=dict(size=8),
+                text=exp_sample_names,
+                hovertext=exp_hover_text,
+                hovertemplate='%{hovertext}<extra></extra>'
+            ))
+        
+        # 대조군 데이터 추가
+        if sorted_ctrl:
+            ctrl_hover_text = [f"샘플명: {name}<br>생산일자: {date if date else '미지정'}<br>Size(nm): {size:.3f}" 
+                              for name, date, size in zip(ctrl_sample_names, ctrl_production_dates, ctrl_size_avgs)]
+            fig_size.add_trace(go.Scatter(
+                x=list(range(1, len(ctrl_sample_names) + 1)),
+                y=ctrl_size_avgs,
+                mode='lines+markers',
+                name='Reference Values',
+                line=dict(color='green', width=3),
+                marker=dict(size=8),
+                text=ctrl_sample_names,
+                hovertext=ctrl_hover_text,
+                hovertemplate='%{hovertext}<extra></extra>'
+            ))
+        
         fig_size.update_layout(
-            title='패스별 Size(nm) 평균값 트렌드',
-            xaxis_title='패스 번호',
+            title='실험군/대조군 Size(nm) 평균값 비교',
+            xaxis_title='샘플 순서',
             yaxis_title='Size(nm) 평균',
-            height=400
+            height=400,
+            legend=dict(
+                itemsizing='constant',
+                font=dict(size=12)
+            )
         )
         
         fig_pi = go.Figure()
-        fig_pi.add_trace(go.Scatter(
-            x=pass_numbers,
-            y=pi_avgs,
-            mode='lines+markers',
-            name='PI 평균',
-            line=dict(color='red', width=3),
-            marker=dict(size=8)
-        ))
+        
+        # 실험군 데이터 추가
+        if sorted_exp:
+            exp_pi_hover_text = [f"샘플명: {name}<br>생산일자: {date if date else '미지정'}<br>PI: {pi:.3f}" 
+                                for name, date, pi in zip(exp_sample_names, exp_production_dates, exp_pi_avgs)]
+            fig_pi.add_trace(go.Scatter(
+                x=list(range(1, len(exp_sample_names) + 1)),
+                y=exp_pi_avgs,
+                mode='lines+markers',
+                name='실험군 PI',
+                line=dict(color='red', width=3),
+                marker=dict(size=8),
+                text=exp_sample_names,
+                hovertext=exp_pi_hover_text,
+                hovertemplate='%{hovertext}<extra></extra>'
+            ))
+        
+        # 대조군 데이터 추가
+        if sorted_ctrl:
+            ctrl_pi_hover_text = [f"샘플명: {name}<br>생산일자: {date if date else '미지정'}<br>PI: {pi:.3f}" 
+                                 for name, date, pi in zip(ctrl_sample_names, ctrl_production_dates, ctrl_pi_avgs)]
+            fig_pi.add_trace(go.Scatter(
+                x=list(range(1, len(ctrl_sample_names) + 1)),
+                y=ctrl_pi_avgs,
+                mode='lines+markers',
+                name='Reference Values',
+                line=dict(color='orange', width=3),
+                marker=dict(size=8),
+                text=ctrl_sample_names,
+                hovertext=ctrl_pi_hover_text,
+                hovertemplate='%{hovertext}<extra></extra>'
+            ))
+        
         fig_pi.update_layout(
-            title='패스별 PI 평균값 트렌드',
-            xaxis_title='패스 번호',
+            title='실험군/대조군 PI 평균값 비교',
+            xaxis_title='샘플 순서',
             yaxis_title='PI 평균',
-            height=400
+            height=400,
+            legend=dict(
+                itemsizing='constant',
+                font=dict(size=12)
+            )
         )
         
         # 상관관계 차트
         fig_correlation = go.Figure()
-        fig_correlation.add_trace(go.Scatter(
-            x=size_avgs,
-            y=pi_avgs,
-            mode='markers+text',
-            text=[f'P{p}' for p in pass_numbers],
-            textposition='top center',
-            marker=dict(size=10, color=pass_numbers, colorscale='viridis'),
-            name='Size vs PI'
-        ))
+        
+        # 실험군 상관관계
+        if sorted_exp:
+            fig_correlation.add_trace(go.Scatter(
+                x=exp_size_avgs,
+                y=exp_pi_avgs,
+                mode='markers+text',
+                text=exp_sample_names,
+                textposition='top center',
+                marker=dict(size=10, color='blue'),
+                name='실험군'
+            ))
+        
+        # 대조군 상관관계
+        if sorted_ctrl:
+            fig_correlation.add_trace(go.Scatter(
+                x=ctrl_size_avgs,
+                y=ctrl_pi_avgs,
+                mode='markers+text',
+                text=ctrl_sample_names,
+                textposition='top center',
+                marker=dict(size=10, color='green'),
+                name='Reference Values'
+            ))
+        
         fig_correlation.update_layout(
-            title='Size(nm) vs PI 상관관계 (패스별)',
+            title='Size(nm) vs PI 상관관계 (실험군/대조군)',
             xaxis_title='Size(nm) 평균',
             yaxis_title='PI 평균',
-            height=400
+            height=400,
+            legend=dict(
+                itemsizing='constant',
+                font=dict(size=12)
+            )
         )
         
         # 고급 통계 계산
+        all_size_avgs = exp_size_avgs + ctrl_size_avgs
+        all_pi_avgs = exp_pi_avgs + ctrl_pi_avgs
+        
         stats = {
-            'pass_count': len(sorted_passes),
+            'pass_count': len(pass_averages),
+            'experimental_count': len(sorted_exp),
+            'control_count': len(sorted_ctrl),
             'size_trend': 'stable',
             'pi_trend': 'stable',
-            'size_cv': (np.std(size_avgs) / np.mean(size_avgs) * 100) if size_avgs else 0,
-            'pi_cv': (np.std(pi_avgs) / np.mean(pi_avgs) * 100) if pi_avgs else 0,
-            'size_mean': np.mean(size_avgs) if size_avgs else 0,
-            'size_std': np.std(size_avgs) if size_avgs else 0,
-            'size_min': np.min(size_avgs) if size_avgs else 0,
-            'size_max': np.max(size_avgs) if size_avgs else 0,
-            'pi_mean': np.mean(pi_avgs) if pi_avgs else 0,
-            'pi_std': np.std(pi_avgs) if pi_avgs else 0,
-            'pi_min': np.min(pi_avgs) if pi_avgs else 0,
-            'pi_max': np.max(pi_avgs) if pi_avgs else 0
+            'size_cv': (np.std(all_size_avgs) / np.mean(all_size_avgs) * 100) if all_size_avgs else 0,
+            'pi_cv': (np.std(all_pi_avgs) / np.mean(all_pi_avgs) * 100) if all_pi_avgs else 0,
+            'size_mean': np.mean(all_size_avgs) if all_size_avgs else 0,
+            'size_std': np.std(all_size_avgs) if all_size_avgs else 0,
+            'size_min': np.min(all_size_avgs) if all_size_avgs else 0,
+            'size_max': np.max(all_size_avgs) if all_size_avgs else 0,
+            'pi_mean': np.mean(all_pi_avgs) if all_pi_avgs else 0,
+            'pi_std': np.std(all_pi_avgs) if all_pi_avgs else 0,
+            'pi_min': np.min(all_pi_avgs) if all_pi_avgs else 0,
+            'pi_max': np.max(all_pi_avgs) if all_pi_avgs else 0
         }
         
         # 상관계수 계산
-        if len(size_avgs) >= 3 and len(pi_avgs) >= 3:
-            correlation = np.corrcoef(size_avgs, pi_avgs)[0, 1]
+        if len(all_size_avgs) >= 3 and len(all_pi_avgs) >= 3:
+            correlation = np.corrcoef(all_size_avgs, all_pi_avgs)[0, 1]
             stats['correlation'] = correlation if not np.isnan(correlation) else 0
         else:
             stats['correlation'] = 0
         
-        # 트렌드 계산 (리니어 회귀 기반)
-        if len(size_avgs) >= 3:
+        # 실험군/대조군 별도 상관계수
+        if len(exp_size_avgs) >= 2 and len(exp_pi_avgs) >= 2:
+            exp_correlation = np.corrcoef(exp_size_avgs, exp_pi_avgs)[0, 1]
+            stats['exp_correlation'] = exp_correlation if not np.isnan(exp_correlation) else 0
+        else:
+            stats['exp_correlation'] = 0
+            
+        if len(ctrl_size_avgs) >= 2 and len(ctrl_pi_avgs) >= 2:
+            ctrl_correlation = np.corrcoef(ctrl_size_avgs, ctrl_pi_avgs)[0, 1]
+            stats['ctrl_correlation'] = ctrl_correlation if not np.isnan(ctrl_correlation) else 0
+        else:
+            stats['ctrl_correlation'] = 0
+        
+        # 트렌드 계산 (실험군 기준)
+        if len(exp_size_avgs) >= 3:
             # 리니어 회귀로 기울기 계산
-            x = np.array(pass_numbers)
-            y_size = np.array(size_avgs)
+            x = np.array(range(len(exp_size_avgs)))
+            y_size = np.array(exp_size_avgs)
             slope_size = np.polyfit(x, y_size, 1)[0]
             
             if abs(slope_size) > 0.01:  # 임계값 조정
@@ -1019,9 +1302,9 @@ def get_pass_trend_data():
         else:
             stats['size_slope'] = 0
                 
-        if len(pi_avgs) >= 3:
-            x = np.array(pass_numbers)
-            y_pi = np.array(pi_avgs)
+        if len(exp_pi_avgs) >= 3:
+            x = np.array(range(len(exp_pi_avgs)))
+            y_pi = np.array(exp_pi_avgs)
             slope_pi = np.polyfit(x, y_pi, 1)[0]
             
             if abs(slope_pi) > 0.001:  # PI는 더 작은 임계값
@@ -1034,9 +1317,9 @@ def get_pass_trend_data():
             stats['pi_slope'] = 0
         
         # 공정 능력 지수 (Cpk 근사치)
-        if len(size_avgs) >= 6:  # 충분한 데이터가 있을 때
-            size_mean = np.mean(size_avgs)
-            size_std = np.std(size_avgs)
+        if len(all_size_avgs) >= 6:  # 충분한 데이터가 있을 때
+            size_mean = np.mean(all_size_avgs)
+            size_std = np.std(all_size_avgs)
             if size_std > 0:
                 # 가정: 사양 3시그마 공정 능력
                 stats['size_capability'] = (3 * size_std) / size_mean * 100
@@ -1051,7 +1334,7 @@ def get_pass_trend_data():
             'pi_trend_chart': json.dumps(fig_pi, cls=PlotlyJSONEncoder),
             'correlation_chart': json.dumps(fig_correlation, cls=PlotlyJSONEncoder),
             'statistics': stats,
-            'pass_data': sorted_passes
+            'pass_data': pass_averages
         })
         
     except Exception as e:
@@ -1065,18 +1348,28 @@ def get_custom_data_correlation():
         pass_averages = current_dataset.get('pass_averages', [])
         sample_name = current_dataset.get('sample_name', 'Sample')
         production_date = current_dataset.get('production_date', '')
-        custom_field_name = current_dataset.get('custom_data_field_name', '사용자 입력 필드(레퍼런스)')
+        custom_field_name = current_dataset.get('custom_data_field_name', '사용자 정의 필드')
         
-        # 실험군과 대조군 데이터 분리
+        # 실험군과 대조군 데이터 분리 및 날짜별 그룹화
         experimental_data = []
         control_data = []
         
         for pass_data in pass_averages:
             if pass_data.get('custom_data_value') is not None:
+                # 생산일자 우선 사용, 없으면 타임스탬프에서 날짜 추출
+                production_date = pass_data.get('production_date')
+                if production_date:
+                    date_part = production_date
+                else:
+                    timestamp = pass_data.get('timestamp', '')
+                    date_part = timestamp.split(' ')[0] if timestamp else '2025-07-17'  # 기본값
+                
                 data_point = {
-                    'pass_number': pass_data['pass_number'],
+                    'sample_name': pass_data.get('sample_name', 'Unknown'),
                     'size_avg': pass_data['size_avg'],
-                    'custom_value': pass_data['custom_data_value']
+                    'custom_value': pass_data['custom_data_value'],
+                    'date': date_part,
+                    'timestamp': pass_data.get('timestamp', '')
                 }
                 
                 if pass_data.get('group_type', 'experimental') == 'experimental':
@@ -1087,7 +1380,7 @@ def get_custom_data_correlation():
         if len(experimental_data) == 0 and len(control_data) == 0:
             return jsonify({'status': 'error', 'message': f'{custom_field_name} 상관관계 분석을 위해서는 최소 1개의 데이터가 필요합니다.'})
         
-        # 상관관계 차트 생성
+        # 상관관계 차트 생성 (날짜별 색상 구분)
         fig = go.Figure()
         
         # 점도 데이터인 경우 기준값 추가
@@ -1099,54 +1392,102 @@ def get_custom_data_correlation():
             ]
             
             # 기준값 플롯 (빨간색)
-            for ref in reference_data:
-                fig.add_trace(go.Scatter(
-                    x=[ref['value']],
-                    y=[ref['size_avg']],
-                    mode='markers+text',
-                    text=[ref['name']],
-                    textposition='top center',
-                    marker=dict(size=15, color='red', symbol='circle', 
-                               line=dict(width=2, color='black')),
-                    name=f"Reference - {ref['name']}" if ref == reference_data[0] else '',
-                    showlegend=ref == reference_data[0],
-                    legendgroup='reference'
-                ))
-        
-        # 실험군 데이터 플롯 (파란색)
-        if experimental_data:
-            exp_custom_values = [d['custom_value'] for d in experimental_data]
-            exp_sizes = [d['size_avg'] for d in experimental_data]
-            exp_pass_numbers = [d['pass_number'] for d in experimental_data]
+            ref_x = [ref['value'] for ref in reference_data]
+            ref_y = [ref['size_avg'] for ref in reference_data]
+            ref_names = [ref['name'] for ref in reference_data]
             
             fig.add_trace(go.Scatter(
-                x=exp_custom_values,
-                y=exp_sizes,
+                x=ref_x,
+                y=ref_y,
                 mode='markers+text',
-                text=[str(p) for p in exp_pass_numbers],
-                textposition='top center',
-                marker=dict(size=10, color='blue', symbol='circle',
+                text=ref_names,
+                textposition='middle right',
+                marker=dict(size=12, color='red', symbol='circle', 
                            line=dict(width=2, color='black')),
-                name='실험군',
+                name='Reference Values',
                 showlegend=True
             ))
         
-        # 대조군 데이터 플롯 (초록색)
+        # 실험군 데이터: 날짜별 색상 구분
+        if experimental_data:
+            # 고유 날짜 추출 및 색상 매핑 (실험군만)
+            unique_dates = sorted(list(set([d['date'] for d in experimental_data])))
+            color_palette = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f']
+            date_colors = {date: color_palette[i % len(color_palette)] for i, date in enumerate(unique_dates)}
+            
+            # 실험군 데이터를 날짜별로 그룹화하여 플롯
+            for date in unique_dates:
+                date_data = [d for d in experimental_data if d['date'] == date]
+                if not date_data:
+                    continue
+                
+                # 샘플 번호 추출 (샘플명에서 숫자 부분 찾기)
+                sample_numbers = []
+                for d in date_data:
+                    sample_name = d['sample_name']
+                    # 샘플명에서 숫자 추출 시도
+                    import re
+                    numbers = re.findall(r'\d+', sample_name)
+                    if numbers:
+                        sample_numbers.append(numbers[-1])  # 마지막 숫자 사용
+                    else:
+                        sample_numbers.append(sample_name)  # 숫자가 없으면 전체 이름 사용
+                
+                x_values = [d['custom_value'] for d in date_data]
+                y_values = [d['size_avg'] for d in date_data]
+                
+                fig.add_trace(go.Scatter(
+                    x=x_values,
+                    y=y_values,
+                    mode='markers+text',
+                    text=sample_numbers,
+                    textposition='middle center',
+                    textfont=dict(size=10, color='black'),
+                    marker=dict(
+                        size=12, 
+                        color=date_colors[date], 
+                        symbol='circle',
+                        line=dict(width=2, color='black')
+                    ),
+                    name=date,
+                    showlegend=True,
+                    hovertemplate='날짜: %{fullData.name}<br>샘플: %{text}<br>' + 
+                                f'{custom_field_name}: %{{x}}<br>Size: %{{y}}<extra></extra>'
+                ))
+        
+        # 대조군 데이터: Reference Values로 별도 표시
         if control_data:
-            ctrl_custom_values = [d['custom_value'] for d in control_data]
-            ctrl_sizes = [d['size_avg'] for d in control_data]
-            ctrl_pass_numbers = [d['pass_number'] for d in control_data]
+            # 샘플 번호 추출 (대조군)
+            ctrl_sample_numbers = []
+            for d in control_data:
+                sample_name = d['sample_name']
+                import re
+                numbers = re.findall(r'\d+', sample_name)
+                if numbers:
+                    ctrl_sample_numbers.append(numbers[-1])
+                else:
+                    ctrl_sample_numbers.append(sample_name)
+            
+            ctrl_x_values = [d['custom_value'] for d in control_data]
+            ctrl_y_values = [d['size_avg'] for d in control_data]
             
             fig.add_trace(go.Scatter(
-                x=ctrl_custom_values,
-                y=ctrl_sizes,
+                x=ctrl_x_values,
+                y=ctrl_y_values,
                 mode='markers+text',
-                text=[str(p) for p in ctrl_pass_numbers],
-                textposition='top center',
-                marker=dict(size=10, color='green', symbol='circle',
-                           line=dict(width=2, color='black')),
-                name='대조군',
-                showlegend=True
+                text=ctrl_sample_numbers,
+                textposition='middle center',
+                textfont=dict(size=10, color='white'),
+                marker=dict(
+                    size=14, 
+                    color='red', 
+                    symbol='diamond',
+                    line=dict(width=2, color='black')
+                ),
+                name='Reference Values (Control)',
+                showlegend=True,
+                hovertemplate='그룹: Reference Values<br>샘플: %{text}<br>' + 
+                            f'{custom_field_name}: %{{x}}<br>Size: %{{y}}<extra></extra>'
             ))
         
         # 레이아웃 설정
@@ -1155,19 +1496,26 @@ def get_custom_data_correlation():
             x_axis_title += ' (10 s⁻¹, cP)'
         
         fig.update_layout(
-            title=f'Production Data - {custom_field_name} vs Size<br>{sample_name}',
+            title=f'Production Data vs Reference Values - {custom_field_name} vs Z-average',
             xaxis_title=x_axis_title,
-            yaxis_title='Size (nm)',
+            yaxis_title='Z-average (nm)',
             height=600,
-            width=800,
+            width=900,
             font=dict(size=12),
             showlegend=True,
             legend=dict(
                 x=1.02,
                 y=1,
                 xanchor='left',
-                yanchor='top'
-            )
+                yanchor='top',
+                bgcolor='rgba(255,255,255,0.8)',
+                bordercolor='rgba(0,0,0,0.2)',
+                borderwidth=1,
+                itemsizing='constant',
+                font=dict(size=12)
+            ),
+            plot_bgcolor='white',
+            paper_bgcolor='white'
         )
         
         # 통계 정보
@@ -1182,11 +1530,23 @@ def get_custom_data_correlation():
         else:
             correlation = 0
         
+        # 실험군 데이터와 대조군 데이터 분리 계산
+        exp_custom_values = [d['custom_value'] for d in experimental_data]
+        exp_sizes = [d['size_avg'] for d in experimental_data]
+        ctrl_custom_values = [d['custom_value'] for d in control_data]
+        ctrl_sizes = [d['size_avg'] for d in control_data]
+        
         stats = {
             'correlation': float(correlation),
+            'data_count': len(all_data),  # 전체 데이터 수
             'experimental_count': len(experimental_data),
             'control_count': len(control_data),
-            'total_count': len(all_data),
+            'custom_mean': float(np.mean(all_custom_values)) if all_custom_values else 0,
+            'size_mean': float(np.mean(all_sizes)) if all_sizes else 0,
+            'exp_custom_mean': float(np.mean(exp_custom_values)) if exp_custom_values else 0,
+            'exp_size_mean': float(np.mean(exp_sizes)) if exp_sizes else 0,
+            'ctrl_custom_mean': float(np.mean(ctrl_custom_values)) if ctrl_custom_values else 0,
+            'ctrl_size_mean': float(np.mean(ctrl_sizes)) if ctrl_sizes else 0,
             'sample_name': sample_name,
             'production_date': production_date,
             'custom_field_name': custom_field_name

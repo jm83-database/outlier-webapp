@@ -148,59 +148,75 @@
             </div>
 
             <div class="border-l-4 border-purple-500 pl-4 bg-purple-50 p-4 rounded-lg shadow-sm">
-                <h4 class="text-lg font-semibold mb-3 text-purple-600">📈 패스별 데이터 관리</h4>
+                <h4 class="text-lg font-semibold mb-3 text-purple-600">🧪 실험군/대조군 데이터 관리</h4>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                     <div>
-                        <h5 class="font-medium mb-2 text-purple-700">📝 평균값 입력</h5>
+                        <h5 class="font-medium mb-2 text-purple-700">📝 실험군 데이터 입력</h5>
                         <ul class="list-disc list-inside space-y-1 text-muted-foreground">
-                            <li><strong>수동 입력:</strong> 패스 번호, Size(nm) 평균, PI 평균 직접 입력</li>
+                            <li><strong>샘플명:</strong> 실험 샘플의 고유 식별자</li>
+                            <li><strong>생산일자:</strong> 실험 데이터의 생산 날짜 (시각화 그룹핑)</li>
+                            <li><strong>이상치 제거법:</strong> Manual, Z-Score, IQR, MAD 중 선택</li>
+                            <li><strong>Size/PI 평균:</strong> 입자 크기 및 다분산지수 평균값</li>
+                            <li><strong>사용자 정의 필드:</strong> 점도, 온도, 압력 등 측정 데이터</li>
                             <li><strong>계산 결과 활용:</strong> 이상치 검출 결과에서 자동 추가</li>
-                            <li><strong>사용자 정의 필드:</strong> 점도, 온도, 압력 등 원하는 데이터 함께 저장</li>
-                            <li><strong>필드명 변경:</strong> 입력 필드명을 직접 수정하여 데이터 종류 설정</li>
                         </ul>
                     </div>
                     <div>
-                        <h5 class="font-medium mb-2 text-purple-700">📊 트렌드 분석</h5>
+                        <h5 class="font-medium mb-2 text-purple-700">📊 대조군 데이터 입력 (레퍼런스)</h5>
                         <ul class="list-disc list-inside space-y-1 text-muted-foreground">
-                            <li><strong>패스별 트렌드:</strong> Size/PI 값의 패스별 변화 추이</li>
-                            <li><strong>상관관계 분석:</strong> Size-PI 간 상관계수 계산</li>
-                            <li><strong>통계 요약:</strong> 평균, 표준편차, 변동계수 제공</li>
+                            <li><strong>샘플명:</strong> 대조군 샘플의 고유 식별자</li>
+                            <li><strong>Size/PI 평균:</strong> 기준 입자 크기 및 다분산지수</li>
+                            <li><strong>사용자 정의 필드:</strong> 기준 측정 데이터</li>
+                            <li><strong>생산일자 불필요:</strong> 레퍼런스이므로 날짜 입력 없음</li>
+                            <li><strong>시각화 구분:</strong> 'Reference Values'로 표시</li>
                         </ul>
                     </div>
+                </div>
+                
+                <div class="mt-4 bg-purple-100 border border-purple-200 p-3 rounded-xl">
+                    <h5 class="font-medium mb-2 text-purple-800">💡 이상치 제거법 정확도 향상</h5>
+                    <ul class="list-disc list-inside space-y-1 text-sm text-purple-700">
+                        <li><strong>명시적 선택:</strong> 사용자가 직접 이상치 제거법을 선택하여 정보 정확도 향상</li>
+                        <li><strong>자동 감지 보조:</strong> Manual 선택 시에만 계산 결과와 매칭하여 자동 감지</li>
+                        <li><strong>중복 방지:</strong> Z-Score와 IQR 결과가 동일해도 사용자 선택 방법 우선 적용</li>
+                        <li><strong>임계값 매칭:</strong> 선택한 방법의 계산 결과와 일치하는 경우 임계값 정보 자동 추가</li>
+                    </ul>
                 </div>
             </div>
             
             <div class="border-l-4 border-teal-500 pl-4 bg-teal-50 p-4 rounded-lg shadow-sm">
-                <h4 class="text-lg font-semibold mb-3 text-teal-600">🔬 실험군/대조군 구분 관리</h4>
+                <h4 class="text-lg font-semibold mb-3 text-teal-600">📊 샘플별 트렌드 분석 및 시각화</h4>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                     <div>
-                        <h5 class="font-medium mb-2 text-teal-700">🔄 그룹 구분 기능</h5>
+                        <h5 class="font-medium mb-2 text-teal-700">📈 트렌드 분석 기능</h5>
                         <ul class="list-disc list-inside space-y-1 text-muted-foreground">
-                            <li><strong>실험군:</strong> 주요 실험 대상 데이터 (파란색 표시)</li>
-                            <li><strong>대조군:</strong> 비교 대상 데이터 (초록색 표시)</li>
-                            <li><strong>동일 구조:</strong> 실험군과 대조군 모두 Size(nm), PI, 사용자 정의 필드 포함</li>
-                            <li><strong>패스별 관리:</strong> 각 패스번호에 대해 실험군/대조군 별도 입력 가능</li>
+                            <li><strong>샘플별 트렌드:</strong> Size/PI 값의 샘플별 변화 추이</li>
+                            <li><strong>생산일자별 정렬:</strong> 실험군 데이터를 생산일자 순으로 정렬</li>
+                            <li><strong>상관관계 분석:</strong> Size-PI 간 상관계수 계산</li>
+                            <li><strong>통계 요약:</strong> 평균, 표준편차, 변동계수 제공</li>
+                            <li><strong>실험군/대조군 구분:</strong> 실험군(파란색), 대조군(Reference Values, 초록색)</li>
                         </ul>
                     </div>
                     <div>
-                        <h5 class="font-medium mb-2 text-teal-700">📊 구분 시각화</h5>
+                        <h5 class="font-medium mb-2 text-teal-700">🎨 시각화 개선사항</h5>
                         <ul class="list-disc list-inside space-y-1 text-muted-foreground">
-                            <li><strong>색상 구분:</strong> 실험군(파란색), 대조군(초록색) 점으로 표시</li>
-                            <li><strong>통합 차트:</strong> 한 개의 plot에서 두 그룹 동시 표시</li>
-                            <li><strong>개별 통계:</strong> 실험군/대조군 데이터 개수 및 통계 별도 제공</li>
-                            <li><strong>비교 분석:</strong> Size(nm) vs 사용자 정의 필드 상관관계 그룹별 비교</li>
+                            <li><strong>날짜별 색상 구분:</strong> 실험군 데이터를 생산일자별로 색상 구분</li>
+                            <li><strong>마커 구분:</strong> 실험군(원형), 대조군(다이아몬드)</li>
+                            <li><strong>범례 최적화:</strong> "Aa" 텍스트 제거로 깔끔한 범례</li>
+                            <li><strong>호버 정보:</strong> 샘플명, 생산일자, 측정값 포함</li>
+                            <li><strong>Reference Values:</strong> 모든 차트에서 대조군 일관된 표시</li>
                         </ul>
                     </div>
                 </div>
                 
                 <div class="mt-4 bg-teal-100 border border-teal-200 p-3 rounded-xl">
-                    <h5 class="font-medium mb-2 text-teal-800">💡 실험군/대조군 활용 가이드</h5>
+                    <h5 class="font-medium mb-2 text-teal-800">💡 사용자 정의 필드 상관관계 분석 가이드</h5>
                     <ol class="list-decimal list-inside space-y-1 text-sm text-teal-700">
-                        <li><strong>그룹 선택:</strong> 패스별 평균값 입력 시 "그룹 구분" 드롭다운에서 실험군/대조군 선택</li>
-                        <li><strong>데이터 입력:</strong> 동일 패스번호로 실험군과 대조군 각각 입력 가능</li>
-                        <li><strong>테이블 확인:</strong> 패스별 데이터 테이블에서 그룹별 색상 뱃지로 구분 표시</li>
-                        <li><strong>시각화:</strong> 상관관계 분석에서 두 그룹이 서로 다른 색상으로 표시</li>
-                        <li><strong>비교 분석:</strong> 실험군과 대조군 간 차이점 및 유사점 시각적 확인</li>
+                        <li><strong>실험군 입력:</strong> 샘플명, 생산일자, 이상치 제거법 등 포함하여 입력</li>
+                        <li><strong>대조군 입력:</strong> 레퍼런스 데이터로 생산일자 없이 입력</li>
+                        <li><strong>상관관계 분석:</strong> 사용자 정의 필드 상관관계 분석 버튼 클릭</li>
+                        <li><strong>시각화 확인:</strong> 날짜별 색상 구분된 실험군과 다이아몬드 모양 대조군 확인</li>
+                        <li><strong>통계 해석:</strong> 실험군/대조군별 통계 정보 및 상관계수 확인</li>
                     </ol>
                 </div>
             </div>

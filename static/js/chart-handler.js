@@ -33,10 +33,10 @@ class ChartHandler {
                 this.lastCalculationResult = result;
                 this.displayResults(result);
                 
-                // 계산 결과 추가 버튼 표시
-                const addFromResultBtn = document.getElementById('addFromResultBtn');
-                if (addFromResultBtn) {
-                    addFromResultBtn.classList.remove('hidden');
+                // 계산 결과 추가 섹션 표시
+                const addFromResultSection = document.getElementById('addFromResultSection');
+                if (addFromResultSection) {
+                    addFromResultSection.classList.remove('hidden');
                 }
                 
                 // 다운로드 버튼들 표시
@@ -206,7 +206,7 @@ class ChartHandler {
     // 사용자 정의 데이터 결과 표시
     displayCustomDataResults(data) {
         const resultsDiv = document.getElementById('viscosity_results');
-        const customFieldName = data.custom_field_name || '사용자 입력 필드(레퍼런스)';
+        const customFieldName = data.custom_field_name || '사용자 정의 필드';
         
         if (!resultsDiv) {
             // 결과 div가 없으면 생성
